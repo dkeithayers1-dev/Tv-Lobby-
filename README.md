@@ -60,6 +60,27 @@ should receive the updated report (comma-separated for more than one).
 If `.env` isn't set up, the app still works — it just tells you the email
 wasn't sent instead of failing the whole request.
 
+#### If a recipient never seems to receive the report
+
+A successful send from this app only means the report left your SMTP
+server — it doesn't guarantee the recipient's mail server accepted it into
+their inbox. If someone consistently doesn't receive the report:
+
+- Have them check their **spam/junk folder** first.
+- If the address is at a company (e.g. a corporate domain rather than
+  Gmail/Outlook/etc.), their employer likely runs an email security
+  gateway (Proofpoint, Mimecast, Microsoft Defender for Office 365, and
+  similar are common). These frequently **quarantine mail from unfamiliar
+  external senders silently — with no bounce sent back to you** — especially
+  when it carries an attachment. There's often a quarantine digest email or
+  a web portal their IT team can point them to, and they can ask IT to
+  allowlist the sending address.
+- Check the sending mailbox for a bounce-back (an email from
+  `mailer-daemon` or `postmaster`, subject like "Undeliverable" or "Mail
+  Delivery Failure"). If there isn't one, the message was almost certainly
+  accepted by the recipient's server, which points at spam/quarantine
+  rather than a bad address or a bug in this app.
+
 ## Running it
 
 ```bash
