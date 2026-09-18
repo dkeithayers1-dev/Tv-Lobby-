@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense Receipts</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Expense Receipts</h1>
+    <a class="link" href="{{ url_for('report_view') }}">View report</a>
+  </header>
+
+  {% if not email_configured %}
+  <div class="banner">
+    Email isn't set up yet. Copy <code>.env.example</code> to <code>.env</code> and fill in
+    your SMTP details so reports get emailed automatically.
+  </div>
+  {% endif %}
+
+  <main>
+    <section class="card">
+      <label class="upload-btn" for="file-input">
+        📷 Add receipt photos or PDFs
+      </label>
+      <input id="file-input" type="file" accept="image/*,application/pdf" capture="environment" multiple>
+      <p class="hint">Take a photo, or pick multiple files from your library / Files app.</p>
+    </section>
+
+    <div id="status"></div>
+    <div id="entries"></div>
+
+    <button id="submit-btn" class="primary-btn" style="display:none;">
+      Add to Expense Report &amp; Email It
+    </button>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
