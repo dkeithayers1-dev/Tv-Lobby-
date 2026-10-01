@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Usage</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Claude Code Usage</h1>
+    <a class="link" href="{{ url_for('index') }}">Receipts</a>
+  </header>
+
+  <main>
+    <p class="hint">Estimated cost at API rates, read from Claude Code's local session logs.
+      On a Pro/Max plan you aren't billed per token. Use this to gauge how much you're using it.</p>
+
+    <div class="stat-row">
+      <div class="stat"><span>Today</span><strong>${{ '%.2f'|format(summary.today.cost) }}</strong></div>
+      <div class="stat"><span>This month</span><strong>${{ '%.2f'|format(summary.month.cost) }}</strong></div>
+      <div class="stat"><span>All time</span><strong>${{ '%.2f'|format(summary.all_time.cost) }}</strong></div>
+    </div>
+
+    {% if summary.budget %}
+    <div class="budget">
+      <div class="budget-label">
+        Monthly budget: ${{ '%.2f'|format(summary.month.cost) }} of ${{ '%.2f'|format(summary.budget) }}
+        ({{ '%.0f'|format(summary.budget_used_pct) }}%)
+      </div>
+      <div class="meter"><div class="meter-fill{% if summary.budget_used_pct >= 100 %} over{% elif summary.budget_used_pct >= 80 %} warn{% endif %}"
+           style="width: {{ [summary.budget_used_pct, 100]|min }}%"></div></div>
+    </div>
+    {% endif %}
+
+    <h2>Daily cost, last {{ summary.days }} days</h2>
+    <div class="bars">
+      {% for d in summary.daily %}
+      <div class="bar" title="{{ d.date }}: ${{ '%.2f'|format(d.cost) }}"
+           style="height: {{ (d.cost / max_daily * 100)|round(1) }}%"></div>
+      {% endfor %}
+    </div>
+
+    <h2>By model</h2>
+    <table class="report-table">
+      <thead><tr><th>Model</th><th>Output tokens</th><th>Cost</th></tr></thead>
+      <tbody>
+        {% for m in summary.by_model %}
+        <tr><td>{{ m.name }}</td><td>{{ '{:,}'.format(m.output) }}</td><td>${{ '%.2f'|format(m.cost) }}</td></tr>
+        {% else %}
+        <tr><td colspan="3">No usage in this window.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>By project</h2>
+    <table class="report-table">
+      <thead><tr><th>Project</th><th>Replies</th><th>Cost</th></tr></thead>
+      <tbody>
+        {% for p in summary.by_project %}
+        <tr><td class="wrap">{{ p.name }}</td><td>{{ p.replies }}</td><td>${{ '%.2f'|format(p.cost) }}</td></tr>
+        {% else %}
+        <tr><td colspan="3">No usage in this window.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if summary.unpriced_models %}
+    <p class="hint">No price on file for {{ summary.unpriced_models|join(', ') }}. These are counted as $0.</p>
+    {% endif %}
+    {% if not summary.all_time.replies %}
+    <p class="hint">No Claude Code logs found in {{ summary.log_dirs|join(', ') }}.
+      Set <code>CLAUDE_PROJECTS_DIR</code> if they live somewhere else.</p>
+    {% endif %}
+
+    <div class="actions">
+      <button id="send-btn" class="primary-btn" {% if not email_configured %}disabled title="Email not configured"{% endif %}>
+        Email me this summary
+      </button>
+    </div>
+    <div id="send-status"></div>
+  </main>
+
+  <script>
+    document.getElementById('send-btn').addEventListener('click', async () => {
+      const statusEl = document.getElementById('send-status');
+      statusEl.textContent = 'Sending...';
+      const res = await fetch("{{ url_for('usage_send') }}", { method: 'POST' });
+      const data = await res.json();
+      statusEl.textContent = data.emailed ? 'Emailed!' : ('Failed: ' + data.error);
+    });
+  </script>
+</body>
+</html>

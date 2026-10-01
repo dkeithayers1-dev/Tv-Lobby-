@@ -8,6 +8,7 @@ from flask import Flask, jsonify, request, render_template, send_file, abort
 
 load_dotenv()
 
+import ai_usage
 import emailer
 import expense_report
 import receipt_parser
@@ -146,6 +147,36 @@ def report_send():
             attachment_path=expense_report.REPORT_PATH,
             subject="Expense Report",
             body=f"Attached is your current expense report. Running total: ${summary['total']:.2f}",
+        )
+        return jsonify({"emailed": True})
+    except emailer.EmailNotConfigured as exc:
+        return jsonify({"emailed": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"emailed": False, "error": str(exc)}), 500
+
+
+@app.route("/usage")
+def usage_view():
+    days = min(max(request.args.get("days", 30, type=int), 1), 365)
+    summary = ai_usage.summarize(days=days)
+    max_daily = max((d["cost"] for d in summary["daily"]), default=0) or 1
+    return render_template("usage.html", summary=summary, max_daily=max_daily,
+                           email_configured=emailer.is_configured())
+
+
+@app.route("/api/usage")
+def api_usage():
+    days = min(max(request.args.get("days", 30, type=int), 1), 365)
+    return jsonify(ai_usage.summarize(days=days))
+
+
+@app.route("/usage/send", methods=["POST"])
+def usage_send():
+    try:
+        summary = ai_usage.summarize()
+        emailer.send_email(
+            subject=f"Claude Code usage: ${summary['month']['cost']:.2f} this month",
+            body=ai_usage.format_summary(summary),
         )
         return jsonify({"emailed": True})
     except emailer.EmailNotConfigured as exc:

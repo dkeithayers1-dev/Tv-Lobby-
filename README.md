@@ -104,6 +104,32 @@ recreate it from the blank template on the next expense you add. There's
 room for 18 expense rows (rows 13–30) per report before you need to start
 a new one.
 
+## Claude Code usage monitor
+
+Visit `/usage` to see how much you're using Claude Code: estimated cost today,
+this month and all time, a 30-day daily chart, and breakdowns by model and
+by project. It reads Claude Code's local session logs
+(`~/.claude/projects/*/*.jsonl`) on the machine running this app, so run the
+app on the computer where you use Claude Code (or point `CLAUDE_PROJECTS_DIR`
+at a copy of those logs).
+
+Costs are estimated at public API per-token rates (input, output, and prompt
+cache reads/writes). On a Pro/Max subscription you aren't billed per token,
+but the estimate still shows how heavily you're using it. Prices are in
+`PRICING` at the top of `ai_usage.py`; a model missing from that table is
+listed on the page and counted as $0.
+
+Set `AI_MONTHLY_BUDGET` in `.env` to show a budget bar. To get an email when
+month-to-date usage passes the budget, schedule the alert check (e.g. daily
+with cron):
+
+```bash
+python ai_usage.py            # print a summary in the terminal
+python ai_usage.py --alert    # email the summary if over AI_MONTHLY_BUDGET
+```
+
+`/api/usage?days=N` returns the same data as JSON.
+
 ## Running the tests
 
 ```bash

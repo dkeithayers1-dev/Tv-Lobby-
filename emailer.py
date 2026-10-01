@@ -1,4 +1,4 @@
-"""Sends the updated expense report as an email attachment via SMTP.
+"""Sends email via SMTP: the updated expense report, and AI usage alerts.
 
 Configured entirely through environment variables (see .env.example) so no
 credentials live in code. If SMTP isn't configured, sending is skipped
@@ -37,6 +37,10 @@ def is_configured() -> bool:
 
 
 def send_report_email(attachment_path: Path, subject: str, body: str):
+    send_email(subject=subject, body=body, attachment_path=attachment_path)
+
+
+def send_email(subject: str, body: str, attachment_path: Path = None):
     config = _get_config()
     if config is None:
         raise EmailNotConfigured(
@@ -50,14 +54,15 @@ def send_report_email(attachment_path: Path, subject: str, body: str):
     msg["To"] = ", ".join(config["mail_to"])
     msg.set_content(body)
 
-    attachment_path = Path(attachment_path)
-    with open(attachment_path, "rb") as f:
-        msg.add_attachment(
-            f.read(),
-            maintype="application",
-            subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            filename=attachment_path.name,
-        )
+    if attachment_path is not None:
+        attachment_path = Path(attachment_path)
+        with open(attachment_path, "rb") as f:
+            msg.add_attachment(
+                f.read(),
+                maintype="application",
+                subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename=attachment_path.name,
+            )
 
     with smtplib.SMTP(config["host"], config["port"], timeout=30) as server:
         if config["use_tls"]:

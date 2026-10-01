@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Expense Receipts</h1>
-    <a class="link" href="{{ url_for('report_view') }}">View report</a>
+    <nav><a class="link" href="{{ url_for('usage_view') }}">AI usage</a> · <a class="link" href="{{ url_for('report_view') }}">View report</a></nav>
   </header>
 
   {% if not email_configured %}
