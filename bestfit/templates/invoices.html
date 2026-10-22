@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Invoices · Best Fit{% endblock %}
+{% block body %}
+<h1>Invoices</h1>
+<table>
+  <thead><tr><th>Number</th><th>Resident</th><th>Status</th><th>Amount</th><th>Due</th></tr></thead>
+  <tbody>
+  {% for invoice in invoices %}
+  <tr>
+    <td><a href="{{ url_for('invoice_detail', invoice_id=invoice.id) }}">{{ invoice.number }}</a></td>
+    <td>{{ invoice.contact_name }}</td>
+    <td>{{ invoice.status }}</td>
+    <td>{{ money(invoice.amount_cents) }}</td>
+    <td>{{ invoice.due_on }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5">No invoices yet. An invoice is created from a prospect after the actual move-in.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

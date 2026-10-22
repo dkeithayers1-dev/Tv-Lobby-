@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Audit · Best Fit{% endblock %}
+{% block body %}
+<h1>Audit</h1>
+<p class="muted">Stage changes, exports, advisor-page views, invoice events, and deletions. Note text is not copied here.</p>
+<table>
+  <thead><tr><th>When</th><th>Who</th><th>Event</th><th>Detail</th></tr></thead>
+  <tbody>
+  {% for event in events %}
+  <tr>
+    <td>{{ event.occurred_at }}</td>
+    <td>{{ event.display_name or "—" }}</td>
+    <td>{{ event.event_type }}</td>
+    <td>{{ event.after_json or "" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

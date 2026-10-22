@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Finance · Best Fit{% endblock %}
+{% block body %}
+<h1>Finance</h1>
+<div class="grid">
+  <div class="stat"><b>{{ money(buckets.Unpaid) }}</b> Unpaid</div>
+  <div class="stat"><b>{{ money(buckets.Sent) }}</b> Sent</div>
+  <div class="stat"><b>{{ money(buckets.Paid) }}</b> Paid</div>
+</div>
+<h2>Sent and not paid</h2>
+<table>
+  <thead><tr><th>Number</th><th>Resident</th><th>Age in days</th><th>Amount</th></tr></thead>
+  <tbody>
+  {% for invoice in aging %}
+  <tr>
+    <td><a href="{{ url_for('invoice_detail', invoice_id=invoice.id) }}">{{ invoice.number }}</a></td>
+    <td>{{ invoice.resident }}</td>
+    <td>{% if invoice.age is not none %}{{ invoice.age }}{% else %}—{% endif %}</td>
+    <td>{{ money(invoice.amount_cents) }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">No sent invoices are waiting on payment.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

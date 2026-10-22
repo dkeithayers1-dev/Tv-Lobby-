@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Timeline · Best Fit{% endblock %}
+{% block body %}
+<h1>Placement timeline</h1>
+<p class="muted">A blank duration means a date is missing. It is not zero.</p>
+<div class="grid">
+  {% for label, summary in report.summaries.items() %}
+  <section class="stat">
+    <h2>{{ label }}</h2>
+    <p>Average {% if summary.average is not none %}{{ summary.average }}{% else %}—{% endif %}</p>
+    <p>Median {% if summary.median is not none %}{{ summary.median }}{% else %}—{% endif %}</p>
+    <p>Fastest {% if summary.fastest is not none %}{{ summary.fastest }}{% else %}—{% endif %} · Slowest {% if summary.slowest is not none %}{{ summary.slowest }}{% else %}—{% endif %}</p>
+  </section>
+  {% endfor %}
+</div>
+<h2>Funnel</h2>
+<table>
+  <thead><tr><th>Stage</th><th>Reached</th><th>Percent of prior</th></tr></thead>
+  <tbody>
+  {% for item in report.funnel %}
+  <tr>
+    <td>{{ item.stage }}</td>
+    <td>{{ item.count }}</td>
+    <td>{% if item.percent_of_prior is not none %}{{ item.percent_of_prior }}%{% else %}—{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h2>Prospects</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Stage</th><th>Days</th><th>Move-in</th><th>To signed</th><th>To move-in</th><th>To paid</th></tr></thead>
+  <tbody>
+  {% for row in report.rows %}
+  <tr class="{% if row.stalled %}stalled{% endif %}">
+    <td><a href="{{ url_for('contact_detail', contact_id=row.id) }}">{{ row.name }}</a>{% if row.out_of_order %} <span class="badge">Review dates</span>{% endif %}</td>
+    <td>{{ row.stage_name }}</td>
+    <td>{% if row.days is not none %}{{ row.days }}{% else %}—{% endif %}</td>
+    <td>{{ row.move_in or "—" }}</td>
+    <td>{% if row.durations.prospect_to_signed is not none %}{{ row.durations.prospect_to_signed }}{% else %}—{% endif %}</td>
+    <td>{% if row.durations.signed_to_move_in is not none %}{{ row.durations.signed_to_move_in }}{% else %}—{% endif %}</td>
+    <td>{% if row.durations.move_in_to_paid is not none %}{{ row.durations.move_in_to_paid }}{% else %}—{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<form method="post" action="{{ url_for('reports_csv') }}" class="no-print">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <button type="submit">Download CSV</button>
+  <button class="secondary" type="button" onclick="window.print()">Print</button>
+</form>
+{% endblock %}

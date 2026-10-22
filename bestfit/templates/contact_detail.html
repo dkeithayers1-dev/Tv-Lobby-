@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name }} · Best Fit{% endblock %}
+{% block body %}
+<p class="no-print"><a href="{{ url_for('contacts') }}">Contacts</a></p>
+<h1>{{ contact.name }}</h1>
+{% if card.stage_index >= 7 %}<p class="badge">Placement completed</p>{% endif %}
+<section class="status panel" aria-label="Placement status">
+  <strong>{{ card.stage_name }}</strong>
+  <div class="track" aria-hidden="true"><span style="width: {{ progress }}%"></span></div>
+  <span>Since {{ milestones[card.stage_index].isoformat() if card.stage_index in milestones else "—" }}</span>
+  <span>{% if card.days is not none %}{{ card.days }} days in this stage{% else %}Days in stage unavailable{% endif %}{% if card.stalled %} · <span class="badge">follow up</span>{% endif %}</span>
+  {% if out_of_order %}<span class="badge">Review dates</span>{% endif %}
+  {% if can_edit %}
+  <form method="post" action="{{ url_for('contact_stage', contact_id=contact.id) }}" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Stage
+      <select name="stage">
+        {% for name in stage_names %}
+        <option value="{{ loop.index0 }}" {% if loop.index0 == card.stage_index %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span><input type="checkbox" name="confirm_backward" value="1"> I mean to move backward</span></label>
+    <button type="submit">Update stage</button>
+  </form>
+  {% endif %}
+</section>
+{% if celebrate %}
+<dialog class="auto celebrate" {% if celebrate == "movein" %}open{% endif %}>
+  {% if celebrate == "movein" %}
+  <div class="burst" aria-hidden="true"></div>
+  <div class="confetti" aria-hidden="true"></div>
+  <h2>Congratulations</h2>
+  <p>{{ contact.name }} reached Actual Move-in. The trophy stays on this record.</p>
+  {% else %}
+  <div class="burst" aria-hidden="true"></div>
+  <p>Moved forward to {{ card.stage_name }}.</p>
+  {% endif %}
+  <form method="dialog"><button type="submit">Close</button></form>
+</dialog>
+{% endif %}
+<nav class="tabs no-print" aria-label="Profile sections">
+  {% for key, label in [("overview", "Overview"), ("care", "Care"), ("family", "Family"), ("communities", "Communities"), ("activity", "Activity")] %}
+  {% if can_edit or key == "overview" %}
+  <a href="{{ url_for('contact_detail', contact_id=contact.id, tab=key) }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}</a>
+  {% endif %}
+  {% endfor %}
+  {% if can_edit %}
+  <a href="{{ url_for('contact_detail', contact_id=contact.id, tab='advisor') }}" {% if tab == "advisor" %}aria-current="page"{% endif %}>Advisor notes</a>
+  {% endif %}
+</nav>
+
+{% if tab == "overview" %}
+<section class="panel stack">
+  <p>{{ contact.email or "No email" }} · {{ contact.phone or "No phone" }}</p>
+  <p>Status {{ card.status }}. Email consent {% if contact.email_consent %}on{% else %}off{% endif %}.</p>
+  {% if not can_edit %}<p class="muted">Care notes and advisor notes are hidden for finance.</p>{% endif %}
+  {% if can_edit %}
+  <p class="no-print"><a href="{{ url_for('contact_edit', contact_id=contact.id) }}">Edit contact</a>
+    · <a href="{{ url_for('family_pdf', contact_id=contact.id) }}">Family intake PDF</a>
+    {% if current_user["role"] == "super_admin" %}
+    · <a href="{{ url_for('advisor_pdf', contact_id=contact.id) }}">Advisor-only page</a>
+    {% endif %}
+  </p>
+  <form class="row" method="post" action="{{ url_for('intake_send', contact_id=contact.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <button type="submit">Email the intake form</button>
+  </form>
+  <form class="row" method="post" action="{{ url_for('intake_send', contact_id=contact.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="test" value="1">
+    <button class="secondary" type="submit">Send TEST to me</button>
+  </form>
+  <form method="post" action="{{ url_for('intake_mark_sent', contact_id=contact.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <button class="secondary" type="submit">Mark sent outside the app</button>
+  </form>
+  {% endif %}
+</section>
+{% elif tab == "care" and can_edit %}
+<form class="panel stack" method="post" action="{{ url_for('contact_profile', contact_id=contact.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="tab" value="care">
+  {% for key in ["care_type", "mobility", "cognition", "medication", "daily_living", "medical_notes"] %}
+  <label>{{ key|replace("_", " ")|title }} <textarea name="{{ key }}">{{ profile.get(key, "") }}</textarea></label>
+  {% endfor %}
+  <button type="submit">Save care</button>
+</form>
+{% elif tab == "family" and can_edit %}
+<form class="panel stack" method="post" action="{{ url_for('contact_profile', contact_id=contact.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="tab" value="family">
+  {% for key in ["primary_contact", "relationship", "family_phone", "family_email", "budget_min", "budget_max", "move_timeline", "preferred_areas", "must_haves", "tour_feedback", "other_notes"] %}
+  <label>{{ key|replace("_", " ")|title }} <input name="{{ key }}" value="{{ profile.get(key, "") }}"></label>
+  {% endfor %}
+  <button type="submit">Save family</button>
+</form>
+{% if profile.get("senior_name") or profile.get("family_intake") %}
+<section class="panel">
+  <h2>Returned intake</h2>
+  <p>{{ profile.get("senior_name", "") }} {{ profile.get("preferred_areas", "") }} {{ profile.get("other_notes", "") }}</p>
+</section>
+{% endif %}
+<form class="panel row" method="post" action="{{ url_for('intake_import', contact_id=contact.id) }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <label>Filled intake PDF <input type="file" name="pdf" accept="application/pdf"></label>
+  <button type="submit">Import answers</button>
+</form>
+{% elif tab == "communities" and can_edit %}
+<section class="panel">
+  <h2>Tours</h2>
+  <p class="muted">Tours live on this prospect. They are not synced to Google or another calendar.</p>
+  {% for tour in tours %}
+  <p>{{ tour.tour_date }} {{ tour.tour_time or "" }} — {{ tour.title }} — {{ tour.status }}</p>
+  {% else %}<p class="muted">No tours yet.</p>{% endfor %}
+  <form class="row" method="post" action="{{ url_for('add_tour', contact_id=contact.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Title <input name="title" required></label>
+    <label>Date <input name="tour_date" type="date" required></label>
+    <label>Time <input name="tour_time"></label>
+    <label>Community
+      <select name="community_id">
+        <option value="">None</option>
+        {% for community in communities %}
+        <option value="{{ community.id }}">{{ community.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Add tour</button>
+  </form>
+</section>
+{% if card.stage_index >= 7 %}
+<section class="panel stack">
+  <h2>Referral invoice</h2>
+  <form method="post" action="{{ url_for('invoice_create', contact_id=contact.id) }}" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Community
+      <select name="community_id" required>
+        <option value="">Choose</option>
+        {% for community in communities %}
+        <option value="{{ community.id }}">{{ community.name }} — license {{ community.license }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Attention <input name="attention"></label>
+    <label>Billing email <input name="billing_email" type="email"></label>
+    <label>CC <input name="cc_email" type="email"></label>
+    <button type="submit">Create invoice at the referral fee</button>
+  </form>
+</section>
+{% endif %}
+{% elif tab == "activity" and can_edit %}
+<section class="panel">
+  {% for task in tasks %}
+  <p>{{ task.title }}{% if task.test %} — TEST{% endif %} — {{ task.status }} — due {{ task.due_on }}
+    {% if task.status == "open" %}
+    <form method="post" action="{{ url_for('task_done', contact_id=contact.id, task_id=task.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <button class="secondary" type="submit">Mark done</button>
+    </form>
+    {% endif %}
+  </p>
+  {% else %}<p class="muted">No tasks.</p>{% endfor %}
+</section>
+<form class="panel stack" method="post" action="{{ url_for('contact_milestones', contact_id=contact.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <h2>Milestone dates</h2>
+  <p class="muted">Saving a date does not fill the stages you skipped.</p>
+  {% for name in stage_names %}
+  {% set milestone = milestones.get(loop.index0) %}
+  <label>{{ name }} <input type="date" name="date_{{ loop.index0 }}" value="{{ milestone.isoformat() if milestone else '' }}"></label>
+  {% endfor %}
+  <button type="submit">Save dates</button>
+</form>
+{% elif tab == "advisor" and can_edit %}
+<form class="panel stack" method="post" action="{{ url_for('contact_advisor', contact_id=contact.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <p class="muted">These notes stay off the family PDF. The printable advisor page is limited to an administrator.</p>
+  {% for key in advisor_keys %}
+  <label>{{ key|replace("_", " ")|title }} <input name="{{ key }}" value="{{ advisor.get(key, "") }}"></label>
+  {% endfor %}
+  <button type="submit">Save advisor notes</button>
+</form>
+{% endif %}
+
+{% if invoices %}
+<section class="panel">
+  <h2>Invoices</h2>
+  <ul>{% for invoice in invoices %}<li><a href="{{ url_for('invoice_detail', invoice_id=invoice.id) }}">{{ invoice.number }}</a> {{ invoice.status }} {{ money(invoice.amount_cents) }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

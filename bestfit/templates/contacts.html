@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Contacts · Best Fit{% endblock %}
+{% block body %}
+<h1>Contacts</h1>
+<p>Showing {{ showing }} of {{ total }}</p>
+<form class="row no-print" method="get">
+  <label>Engagement
+    <select name="engagement">
+      <option value="all" {% if engagement == "all" %}selected{% endif %}>All</option>
+      <option value="inactive" {% if engagement == "inactive" %}selected{% endif %}>Inactive 90+</option>
+      <option value="reachable" {% if engagement == "reachable" %}selected{% endif %}>Reachable inactive</option>
+    </select>
+  </label>
+  <label>Placement
+    <select name="stage">
+      <option value="any" {% if stage == "any" %}selected{% endif %}>Any stage</option>
+      <option value="in_progress" {% if stage == "in_progress" %}selected{% endif %}>In progress</option>
+      <option value="moved_in" {% if stage == "moved_in" %}selected{% endif %}>Moved in</option>
+      <option value="stalled" {% if stage == "stalled" %}selected{% endif %}>Stalled</option>
+      {% for name in stage_names %}
+      <option value="{{ loop.index0 }}" {% if stage == loop.index0|string %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Search <input name="q" value="{{ query }}"></label>
+  <button type="submit">Filter</button>
+</form>
+{% if not limited %}<p class="no-print"><a class="button" href="{{ url_for('contact_new') }}">Add a prospect</a></p>{% endif %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Status</th><th>Stage</th><th>Days</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr class="{% if row.stalled %}stalled{% endif %}">
+    <td><a href="{{ url_for('contact_detail', contact_id=row.id) }}">{{ row.name }}</a></td>
+    <td>{{ row.status }}</td>
+    <td>{{ row.stage_name }}{% if row.stalled %} <span class="badge">follow up</span>{% endif %}</td>
+    <td>{% if row.days is not none %}{{ row.days }}{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4">No contacts match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
