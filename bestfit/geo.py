@@ -184,6 +184,40 @@ class Geocoder:
         self.opener = opener
         self._last_call = 0.0
 
+    def _remember(self, key: str, text: str, point: tuple[float, float], detail: str) -> LocateResult:
+        self.cache[key] = point
+        lat, lng = point
+        miles = haversine(AUSTIN, point)
+        out = miles > DIRECTORY_RADIUS_MILES
+        if out:
+            detail = (
+                f"That point is about {round(miles)} miles from Austin, outside the "
+                f"Central Texas directory (about {DIRECTORY_RADIUS_MILES} miles)."
+            )
+        return LocateResult(
+            lat=lat,
+            lng=lng,
+            source="nominatim",
+            label=text,
+            miles_from_austin=round(miles, 1),
+            out_of_area=out,
+            detail=detail,
+            store_cache=True,
+        )
+
+    def _network(self, key: str, text: str) -> LocateResult | None:
+        wait = 1.0 - (time.monotonic() - self._last_call)
+        if wait > 0 and self._last_call:
+            time.sleep(wait)
+        self._last_call = time.monotonic()
+        try:
+            point = nominatim_search(text, self.opener)
+        except Exception:
+            point = None
+        if point is None:
+            return None
+        return self._remember(key, text, point, "Located on the server from the address.")
+
     def locate(self, query: str) -> LocateResult | None:
         text = (query or "").strip()
         if not text:
@@ -209,37 +243,17 @@ class Geocoder:
                 detail=detail,
             )
         streetish = bool(re.search(r"\d", text)) and not re.fullmatch(r"\d{5}(?:-\d{4})?", text)
+        # A known town or ZIP stays on the built-in center. A street, or a place
+        # that is not on file, can use the server geocoder when it is enabled.
         if self.enabled and streetish:
-            wait = 1.0 - (time.monotonic() - self._last_call)
-            if wait > 0 and self._last_call:
-                time.sleep(wait)
-            self._last_call = time.monotonic()
-            try:
-                point = nominatim_search(text, self.opener)
-            except Exception:
-                point = None
-            if point is not None:
-                self.cache[key] = point
-                lat, lng = point
-                miles = haversine(AUSTIN, point)
-                out = miles > DIRECTORY_RADIUS_MILES
-                detail = "Located on the server from the street address."
-                if out:
-                    detail = (
-                        f"That address is about {round(miles)} miles from Austin, outside the "
-                        f"Central Texas directory (about {DIRECTORY_RADIUS_MILES} miles)."
-                    )
-                return LocateResult(
-                    lat=lat,
-                    lng=lng,
-                    source="nominatim",
-                    label=text,
-                    miles_from_austin=round(miles, 1),
-                    out_of_area=out,
-                    detail=detail,
-                    store_cache=True,
-                )
+            located = self._network(key, text)
+            if located is not None:
+                return located
         result = locate_offline(text)
+        if self.enabled and (result is None or result.get("lat") is None):
+            located = self._network(key, text)
+            if located is not None:
+                return located
         return result
 
 

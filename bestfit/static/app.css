@@ -131,9 +131,18 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
   color: inherit;
 }
 .person small { color: var(--muted); }
-.map-plot { width: 100%; height: auto; background: #f7f1e6; border: 1px solid var(--line); }
+.map-plot {
+  width: min(100%, 420px);
+  height: auto;
+  aspect-ratio: 1;
+  display: block;
+  background: #f7f1e6;
+  border: 1px solid var(--line);
+}
+.map-plot text, .map-label { fill: var(--ink); font-family: "Avenir Next", "Segoe UI", sans-serif; }
 .star { fill: var(--accent); }
 .pin { fill: #8c4a2f; }
+.match-list { margin: 0 0 12px; padding-left: 1.2rem; }
 .license-unknown { color: var(--warn); font-weight: 600; }
 dialog { border: 1px solid var(--line); background: var(--paper); color: var(--ink); max-width: 440px; padding: 18px; }
 dialog::backdrop { background: rgba(30, 25, 20, 0.45); }

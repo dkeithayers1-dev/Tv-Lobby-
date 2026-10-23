@@ -527,6 +527,12 @@ def test_map_explains_out_of_area_and_plots_a_local_zip(client):
         },
         follow_redirects=True,
     )
+    opened = client.get("/map").get_data(as_text=True)
+    assert 'class="map-plot"' in opened
+    assert 'viewBox="-14 -14 128 128"' in opened
+    assert 'class="star"' in opened
+    assert "Cedar Court" in opened
+    assert "Showing the directory around Austin" in opened
     far = client.post(
         "/map",
         data={"csrf": token(client, "/map"), "action": "search", "query": "75201", "radius": "25", "care": "", "name": ""},

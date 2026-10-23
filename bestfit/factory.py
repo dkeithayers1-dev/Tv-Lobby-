@@ -33,6 +33,7 @@ from bestfit.documents import (
     invoice_pdf,
 )
 from bestfit.domain import (
+    AUSTIN,
     INVOICE_PAID_INDEX,
     MOVE_IN_INDEX,
     STAGES,
@@ -915,19 +916,56 @@ def _register(app: Flask) -> None:
             "funnel": funnel(reached),
         }
 
+    def _community_plot(center, communities, radius, care, name, label):
+        ranked = rank_communities(center, communities, radius, care, name)
+        north = (center[0] + radius / 69.0, center[1])
+        coords = project(
+            center,
+            [north] + [(row["lat"], row["lng"]) for row in ranked],
+            radius,
+        )
+        lead_xy = coords[0]
+        edge = coords[1]
+        distance = max(abs(edge[0] - lead_xy[0]), abs(edge[1] - lead_xy[1]), 1)
+        pins = [
+            {
+                "x": xy[0],
+                "y": xy[1],
+                "n": index + 1,
+                "name": row["name"],
+                "miles": row["miles"],
+                "license": row["license"],
+            }
+            for index, (row, xy) in enumerate(zip(ranked, coords[2:]))
+        ]
+        short = label if len(label) <= 22 else label[:21] + "…"
+        return {"x": lead_xy[0], "y": lead_xy[1], "r": distance, "label": short, "pins": pins}
+
     @app.route("/map", methods=["GET", "POST"])
     @roles("super_admin", "advisor")
     def community_map():
         actor = current()
         message = None
-        result = None
-        ranked = []
-        pins = []
-        radius = float(request.form.get("radius") or request.args.get("radius") or 25)
-        care = request.form.get("care") or ""
-        name = request.form.get("name") or ""
-        query = request.form.get("query") or ""
-        if request.method == "POST" and request.form.get("action") == "search":
+        plot = None
+        try:
+            radius = float(request.values.get("radius") or 25)
+        except ValueError:
+            radius = 25
+        radius = min(120.0, max(1.0, radius))
+        care = request.values.get("care") or ""
+        name = request.values.get("name") or ""
+        query = (request.values.get("query") or "").strip()
+        searching = bool(query) and (
+            request.method == "POST" or request.args.get("action") == "search" or "query" in request.args
+        )
+        saved = [
+            dict(row)
+            for row in db().execute(
+                "SELECT * FROM communities WHERE organization_id = ?",
+                (actor["organization_id"],),
+            ).fetchall()
+        ]
+        if searching:
             cache_rows = db().execute("SELECT query, lat, lng FROM geocode_cache").fetchall()
             cache = {row["query"]: (row["lat"], row["lng"]) for row in cache_rows}
             geocoder = Geocoder(enabled=bool(app.config.get("NOMINATIM")), cache=cache)
@@ -944,27 +982,22 @@ def _register(app: Flask) -> None:
                 message = result["detail"]
             elif result and result.get("lat") is not None:
                 message = result["detail"] + " Distances are straight-line, not drive time."
-                communities = [dict(row) for row in db().execute(
-                    "SELECT * FROM communities WHERE organization_id = ?",
-                    (actor["organization_id"],),
-                ).fetchall()]
-                ranked = rank_communities((result["lat"], result["lng"]), communities, radius, care, name)
-                north = (result["lat"] + radius / 69.0, result["lng"])
-                coords = project(
+                plot = _community_plot(
                     (result["lat"], result["lng"]),
-                    [north] + [(row["lat"], row["lng"]) for row in ranked],
+                    saved,
                     radius,
+                    care,
+                    name,
+                    result.get("label") or "Search",
                 )
-                lead_xy = coords[0]
-                edge = coords[1]
-                distance = max(abs(edge[0] - lead_xy[0]), abs(edge[1] - lead_xy[1]), 1)
-                pins = [
-                    {"x": xy[0], "y": xy[1], "n": index + 1, "name": row["name"], "miles": row["miles"], "license": row["license"]}
-                    for index, (row, xy) in enumerate(zip(ranked, coords[2:]))
-                ]
-                result = {**result, "x": lead_xy[0], "y": lead_xy[1], "r": distance}
+                if not plot["pins"]:
+                    message += " No saved communities are inside this radius."
             elif result:
                 message = result["detail"]
+        if plot is None:
+            plot = _community_plot(AUSTIN, saved, max(radius, 25), "", "", "Austin")
+            if not searching:
+                message = "Showing the directory around Austin. Search a town, ZIP, or street to measure from a family’s address."
         communities = db().execute(
             "SELECT * FROM communities WHERE organization_id = ? ORDER BY name",
             (actor["organization_id"],),
@@ -972,12 +1005,10 @@ def _register(app: Flask) -> None:
         return render_template(
             "map.html",
             message=message,
-            result=result,
-            ranked=ranked,
-            pins=pins,
+            plot=plot,
             communities=communities,
             query=query,
-            radius=radius,
+            radius=int(radius) if radius == int(radius) else radius,
             care=care,
             name=name,
         )

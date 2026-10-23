@@ -2,9 +2,8 @@
 {% block title %}Map · Best Fit{% endblock %}
 {% block body %}
 <h1>Community match</h1>
-<p class="lede">Search by a Central Texas town or ZIP. A street is placed at its ZIP center unless server geocoding is turned on. The plot stays on this server. Distances are straight-line.</p>
-<form class="panel row" method="post">
-  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+<p class="lede">The star is the place you are measuring from. The circle is the radius. Numbers are communities inside that circle. Distances are straight-line, and the drawing stays on this server.</p>
+<form class="panel row" method="get">
   <input type="hidden" name="action" value="search">
   <label>Address, town, or ZIP <input name="query" value="{{ query }}" required></label>
   <label>Care type <input name="care" value="{{ care }}" placeholder="AL"></label>
@@ -13,22 +12,28 @@
   <button type="submit">Search</button>
 </form>
 {% if message %}<p class="flash" role="status">{{ message }}</p>{% endif %}
-{% if result and result.x is defined %}
-<svg class="map-plot" viewBox="0 0 100 100" role="img" aria-label="Straight-line community plot">
-  <circle cx="{{ result.x }}" cy="{{ result.y }}" r="{{ result.r }}" fill="none" stroke="#1d4a3c" stroke-width="0.6"></circle>
-  <polygon class="star" points="{{ result.x }},{{ result.y - 2.2 }} {{ result.x + 0.7 }},{{ result.y - 0.6 }} {{ result.x + 2.3 }},{{ result.y - 0.6 }} {{ result.x + 1 }},{{ result.y + 0.5 }} {{ result.x + 1.5 }},{{ result.y + 2.2 }} {{ result.x }},{{ result.y + 1.1 }} {{ result.x - 1.5 }},{{ result.y + 2.2 }} {{ result.x - 1 }},{{ result.y + 0.5 }} {{ result.x - 2.3 }},{{ result.y - 0.6 }} {{ result.x - 0.7 }},{{ result.y - 0.6 }}"></polygon>
-  {% for pin in pins %}
-  <g class="pin-group">
-    <circle class="pin" cx="{{ pin.x }}" cy="{{ pin.y }}" r="1.6"></circle>
-    <text x="{{ pin.x + 2 }}" y="{{ pin.y }}" font-size="3">{{ pin.n }} {{ pin.name }}</text>
-  </g>
-  {% endfor %}
-</svg>
-<ol>
-  {% for pin in pins %}
+{% if plot %}
+{% if plot.pins %}
+<ol class="match-list">
+  {% for pin in plot.pins %}
   <li>{{ pin.n }}. {{ pin.name }} — {{ pin.miles }} miles — license {{ pin.license }}{% if pin.license == "unknown" %} <span class="license-unknown">unverified</span>{% endif %}</li>
   {% endfor %}
 </ol>
+{% endif %}
+<svg class="map-plot" viewBox="-14 -14 128 128" role="img" aria-label="Straight-line community plot">
+  <circle cx="{{ plot.x }}" cy="{{ plot.y }}" r="{{ plot.r }}" fill="none" stroke="#1d4a3c" stroke-width="1.2"></circle>
+  <text x="{{ plot.x - 1.5 }}" y="{{ plot.y - plot.r - 1.5 }}" font-size="4" text-anchor="middle">N</text>
+  <polygon class="star" points="{{ plot.x }},{{ plot.y - 4 }} {{ plot.x + 1.2 }},{{ plot.y - 1.2 }} {{ plot.x + 4 }},{{ plot.y - 1.2 }} {{ plot.x + 1.8 }},{{ plot.y + 0.8 }} {{ plot.x + 2.6 }},{{ plot.y + 4 }} {{ plot.x }},{{ plot.y + 2 }} {{ plot.x - 2.6 }},{{ plot.y + 4 }} {{ plot.x - 1.8 }},{{ plot.y + 0.8 }} {{ plot.x - 4 }},{{ plot.y - 1.2 }} {{ plot.x - 1.2 }},{{ plot.y - 1.2 }}"></polygon>
+  <text class="map-label" x="{{ plot.x + 5 }}" y="{{ plot.y + 1.2 }}" font-size="4">{{ plot.label }}</text>
+  {% for pin in plot.pins %}
+  <g class="pin-group">
+    <circle class="pin" cx="{{ pin.x }}" cy="{{ pin.y }}" r="2.6">
+      <title>{{ pin.n }}. {{ pin.name }}, {{ pin.miles }} miles</title>
+    </circle>
+    <text x="{{ pin.x + 3.4 }}" y="{{ pin.y + 1.3 }}" font-size="4">{{ pin.n }}</text>
+  </g>
+  {% endfor %}
+</svg>
 {% endif %}
 <section class="panel stack">
   <h2>Directory</h2>
