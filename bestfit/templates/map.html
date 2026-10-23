@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Map · Best Fit{% endblock %}
+{% block body %}
+<h1>Community match</h1>
+<p class="lede">The star is the place you are measuring from. The circle is the radius. Numbers are communities inside that circle. Distances are straight-line, and the drawing stays on this server.</p>
+<form class="panel row" method="get">
+  <input type="hidden" name="action" value="search">
+  <label>Address, town, or ZIP <input name="query" value="{{ query }}" required></label>
+  <label>Care type <input name="care" value="{{ care }}" placeholder="AL"></label>
+  <label>Radius in miles <input name="radius" type="number" min="1" max="120" value="{{ radius }}"></label>
+  <label>Name contains <input name="name" value="{{ name }}"></label>
+  <button type="submit">Search</button>
+</form>
+{% if message %}<p class="flash" role="status">{{ message }}</p>{% endif %}
+{% if plot %}
+{% if plot.pins %}
+<ol class="match-list">
+  {% for pin in plot.pins %}
+  <li>{{ pin.n }}. {{ pin.name }} — {{ pin.miles }} miles — license {{ pin.license }}{% if pin.license == "unknown" %} <span class="license-unknown">unverified</span>{% endif %}</li>
+  {% endfor %}
+</ol>
+{% endif %}
+<svg class="map-plot" viewBox="-14 -14 128 128" role="img" aria-label="Straight-line community plot">
+  <circle cx="{{ plot.x }}" cy="{{ plot.y }}" r="{{ plot.r }}" fill="none" stroke="#1d4a3c" stroke-width="1.2"></circle>
+  <text x="{{ plot.x - 1.5 }}" y="{{ plot.y - plot.r - 1.5 }}" font-size="4" text-anchor="middle">N</text>
+  <polygon class="star" points="{{ plot.x }},{{ plot.y - 4 }} {{ plot.x + 1.2 }},{{ plot.y - 1.2 }} {{ plot.x + 4 }},{{ plot.y - 1.2 }} {{ plot.x + 1.8 }},{{ plot.y + 0.8 }} {{ plot.x + 2.6 }},{{ plot.y + 4 }} {{ plot.x }},{{ plot.y + 2 }} {{ plot.x - 2.6 }},{{ plot.y + 4 }} {{ plot.x - 1.8 }},{{ plot.y + 0.8 }} {{ plot.x - 4 }},{{ plot.y - 1.2 }} {{ plot.x - 1.2 }},{{ plot.y - 1.2 }}"></polygon>
+  <text class="map-label" x="{{ plot.x + 5 }}" y="{{ plot.y + 1.2 }}" font-size="4">{{ plot.label }}</text>
+  {% for pin in plot.pins %}
+  <g class="pin-group">
+    <circle class="pin" cx="{{ pin.x }}" cy="{{ pin.y }}" r="2.6">
+      <title>{{ pin.n }}. {{ pin.name }}, {{ pin.miles }} miles</title>
+    </circle>
+    <text x="{{ pin.x + 3.4 }}" y="{{ pin.y + 1.3 }}" font-size="4">{{ pin.n }}</text>
+  </g>
+  {% endfor %}
+</svg>
+{% endif %}
+<section class="panel stack">
+  <h2>Directory</h2>
+  {% if communities %}
+  <ul>
+    {% for community in communities %}
+    <li>{{ community.name }} — {{ community.city }} {{ community.zip }} — {{ community.care_types }} — license {{ community.license }}{% if community.license == "unknown" %} <span class="license-unknown">unverified</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No communities yet. Add one, or import a CSV with columns name, care_types, address, city, zip, license. License must be yes, no, or unknown.</p>
+  {% endif %}
+  <form class="stack" method="post" action="{{ url_for('community_add') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <div class="row">
+      <label>Name <input name="name" required></label>
+      <label>Care types <input name="care_types" placeholder="AL,MC"></label>
+      <label>Address <input name="address"></label>
+      <label>City <input name="city"></label>
+      <label>ZIP <input name="zip"></label>
+      <label>License
+        <select name="license">
+          <option value="unknown">unknown</option>
+          <option value="yes">yes</option>
+          <option value="no">no</option>
+        </select>
+      </label>
+    </div>
+    <button type="submit">Add community</button>
+  </form>
+  {% if current_user["role"] == "super_admin" %}
+  <form method="post" action="{{ url_for('community_import') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>CSV <input type="file" name="csv" accept=".csv,text/csv"></label>
+    <button type="submit">Import CSV</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

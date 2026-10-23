@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Privacy · Best Fit{% endblock %}
+{% block body %}
+<h1>What this system stores</h1>
+<p>Best Fit keeps prospect names, family contact details, care notes, tour plans, community matches, and referral invoices for one placement firm. Advisor notes and the advisor PDF are separate from the family intake form.</p>
+<p>Email is sent by this server only when SMTP is configured, and only with email consent. Text messages are not sent. A recorded invoice payment stores the reference an advisor typed. It is not a confirmation from a bank.</p>
+<p>Backups are encrypted with the server data key. Losing that key means those files cannot be opened. The database file is not a substitute for a key held outside the server.</p>
+<p>Retention deletes closed, paid records only after an administrator sets a number of days. This software does not decide whether HIPAA, Texas privacy law, or another rule applies to your firm. That has to be confirmed with counsel, then reflected in the retention setting and in who you give accounts to.</p>
+<p>The directory does not ship with unverified license claims. A community stays “license unknown” until someone sets yes or no.</p>
+{% endblock %}

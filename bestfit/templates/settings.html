@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Settings · Best Fit{% endblock %}
+{% block body %}
+<h1>Settings</h1>
+<p class="lede">Family PDFs and invoices include the phone, email, and website. The referral fee is a flat amount copied onto each new invoice.</p>
+<form class="panel stack" method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <label>Business name <input name="business_name" value="{{ settings.business_name }}" required></label>
+  <label>Street <input name="street" value="{{ settings.street }}" required></label>
+  <label>City line <input name="city_line" value="{{ settings.city_line }}" required></label>
+  <label>Phone <input name="phone" value="{{ settings.phone }}" required></label>
+  <label>Email <input name="email" type="email" value="{{ settings.email }}" required></label>
+  <label>Website <input name="website" value="{{ settings.website }}" required></label>
+  <label>Terms <input name="terms" value="{{ settings.terms }}"></label>
+  <label>Flat referral fee (dollars) <input name="referral_fee" value="{% if settings.referral_fee_cents %}{{ '%.2f'|format(settings.referral_fee_cents / 100) }}{% endif %}" required></label>
+  <label>Retention days after payment <input name="retention_days" value="{{ settings.retention_days or '' }}" placeholder="Blank keeps records"></label>
+  <fieldset>
+    <legend>Stall limits in days</legend>
+    <div class="row">
+      {% for index in range(9) %}
+      <label>{{ stage_names[index] }} <input name="stall_{{ index }}" type="number" min="1" value="{{ limits[index] }}"></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <button type="submit">Save settings</button>
+</form>
+<section class="panel">
+  <h2>Retention</h2>
+  {% if not settings.retention_days %}
+  <p>No retention period is set, so nothing is offered for deletion. Counsel should confirm how long closed files are kept.</p>
+  {% elif eligible %}
+  <ul>
+    {% for row in eligible %}
+    <li>{{ row.name }} paid {{ row.paid_at }}
+      <form method="post" action="{{ url_for('retention_delete', contact_id=row.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button class="danger" type="submit">Delete closed record</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No paid record is past {{ settings.retention_days }} days.</p>
+  {% endif %}
+</section>
+{% endblock %}

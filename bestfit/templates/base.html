@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf" content="{{ csrf_token }}">
+  <title>{% block title %}Best Fit{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <a class="skip" href="#content">Skip to content</a>
+  {% if current_user %}
+  <header class="top no-print">
+    <div class="brand"><a href="{{ url_for('dashboard') }}">Best Fit Senior Placement</a></div>
+    <nav class="nav" aria-label="Primary">
+      {% if current_user["role"] != "finance" %}
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('contacts') }}">Contacts</a>
+      <a href="{{ url_for('pipeline') }}">Pipeline</a>
+      <a href="{{ url_for('reports') }}">Timeline</a>
+      <a href="{{ url_for('community_map') }}">Map</a>
+      {% else %}
+      <a href="{{ url_for('finance_home') }}">Finance</a>
+      <a href="{{ url_for('contacts') }}">Contacts</a>
+      {% endif %}
+      <a href="{{ url_for('invoice_list') }}">Invoices</a>
+      {% if current_user["role"] == "super_admin" %}
+      <a href="{{ url_for('users') }}">Users</a>
+      <a href="{{ url_for('settings') }}">Settings</a>
+      <a href="{{ url_for('audit_log') }}">Audit</a>
+      <a href="{{ url_for('backup') }}">Backup</a>
+      {% endif %}
+      <a href="{{ url_for('privacy') }}">Privacy</a>
+    </nav>
+    <div class="session">
+      <span>{{ current_user["display_name"] }}</span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button class="linkish" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+  {% endif %}
+  <main id="content">
+    {% with messages = get_flashed_messages() %}
+      {% for message in messages %}
+      <p class="flash" role="status">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% if current_user and current_user["role"] == "super_admin" and not documents_ready %}
+    <p class="banner">Phone, email, website, and the referral fee are still blank. Family PDFs and invoices stay off until those are saved in Settings.</p>
+    {% endif %}
+    {% block body %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

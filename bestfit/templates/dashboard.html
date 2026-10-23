@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Best Fit{% endblock %}
+{% block body %}
+<h1>Today</h1>
+<p class="lede">Dates use America/Chicago.</p>
+<div class="grid">
+  <div class="stat"><b>{{ total }}</b> Contacts</div>
+  <div class="stat"><b>{{ due|length }}</b> Due or overdue</div>
+  <div class="stat"><b>{{ tours|length }}</b> Tours to review</div>
+  <div class="stat"><b>{{ move_ins|length }}</b> Move-ins recorded</div>
+  <div class="stat"><b>{{ invoice_follow|length }}</b> Invoice follow-through</div>
+</div>
+<div class="stack" style="margin-top:16px">
+  <section class="panel">
+    <h2>Due now</h2>
+    {% if due %}
+    <ul>
+      {% for task in due %}
+      <li><a href="{{ url_for('contact_detail', contact_id=task.contact_id) }}">{{ task.contact_name }}</a> — {{ task.title }} — due {{ task.due_on }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">Nothing due.</p>{% endif %}
+  </section>
+  <section class="panel">
+    <h2>Upcoming</h2>
+    {% if upcoming %}
+    <ul>{% for task in upcoming %}<li>{{ task.contact_name }} — {{ task.title }} — {{ task.due_on }}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">No tasks in the next 7 days.</p>{% endif %}
+  </section>
+  <section class="panel">
+    <h2>New prospects</h2>
+    {% if new_people %}
+    <ul>{% for person in new_people %}<li><a href="{{ url_for('contact_detail', contact_id=person.id) }}">{{ person.name }}</a></li>{% endfor %}</ul>
+    {% else %}<p class="muted">No new prospects this week.</p>{% endif %}
+  </section>
+  <section class="panel">
+    <h2>Stalled placements</h2>
+    <p class="muted">Longest wait first. Up to seven.</p>
+    {% if stalled %}
+    <ul>
+      {% for person in stalled %}
+      <li><a href="{{ url_for('contact_detail', contact_id=person.id) }}">{{ person.name }}</a> — {{ person.stage_name }} — {{ person.days }} days — follow up</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">No stalled prospects.</p>{% endif %}
+  </section>
+  <p><a class="button" href="{{ url_for('contact_new') }}">Add a prospect</a> <a class="button secondary" href="{{ url_for('pipeline') }}">Open the pipeline</a></p>
+</div>
+{% endblock %}

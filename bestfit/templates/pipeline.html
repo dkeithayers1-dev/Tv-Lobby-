@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Pipeline · Best Fit{% endblock %}
+{% block body %}
+<h1>Placement pipeline</h1>
+<p class="muted">On a phone, use the stage list on each card. Dragging works with a pointer. Moving backward asks first and keeps milestone dates.</p>
+<p class="muted">Stall limits:
+  {% for index in range(9) %}{{ stage_names[index] }} {{ limits[index] }}d{% if not loop.last %} · {% endif %}{% endfor %}.
+  Invoice Paid does not stall.
+</p>
+<div class="board-scroll">
+  <div class="board">
+    {% for index in range(10) %}
+    <section class="column panel" data-drop="{{ index }}">
+      <h2>{{ stage_names[index] }} ({{ columns[index]|length }})</h2>
+      {% for card in columns[index] %}
+      <article class="person panel {% if card.stalled %}stalled{% endif %}" draggable="true" data-drag data-id="{{ card.id }}" data-stage="{{ card.stage_index }}">
+        <a href="{{ url_for('contact_detail', contact_id=card.id) }}">{{ card.name }}</a>
+        {% if card.stage_index >= 7 %}<span aria-label="Placement completed">Trophy</span>{% endif %}
+        <small>{% if card.days is not none %}{{ card.days }} days{% else %}—{% endif %}{% if card.stalled %} · follow up{% endif %}</small>
+        <form method="post" action="{{ url_for('pipeline_move') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <input type="hidden" name="contact_id" value="{{ card.id }}">
+          <label class="sr" for="move-{{ card.id }}">Move {{ card.name }}</label>
+          <select id="move-{{ card.id }}" name="stage">
+            {% for name in stage_names %}
+            <option value="{{ loop.index0 }}" {% if loop.index0 == card.stage_index %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+          <label><span><input type="checkbox" name="confirm_backward" value="1"> Confirm backward</span></label>
+          <button type="submit">Move</button>
+        </form>
+      </article>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

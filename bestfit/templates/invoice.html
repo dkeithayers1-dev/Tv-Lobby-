@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.number }} · Best Fit{% endblock %}
+{% block body %}
+<article class="panel stack">
+  <h1>{{ settings.business_name }}</h1>
+  <p>{{ settings.street }}<br>{{ settings.city_line }}<br>{{ settings.phone }} · {{ settings.email }} · {{ settings.website }}</p>
+  <p><strong>{{ invoice.number }}</strong> · {{ invoice.invoice_date }} · Due {{ invoice.due_on }} · {{ settings.terms }}</p>
+  <h2>Bill to</h2>
+  <p>{{ community.name if community else "" }}<br>{{ invoice.attention }}<br>{{ invoice.street }}<br>{{ invoice.city }} {{ invoice.state }} {{ invoice.zip }}<br>{{ invoice.billing_email }}</p>
+  <p>Resident placed: {{ invoice.resident }}<br>Move-in: {{ invoice.move_in }}</p>
+  <p>{{ invoice.description }} <strong>{{ money(invoice.amount_cents) }}</strong></p>
+  <p>{{ invoice.fee_rule }}</p>
+  <p>Status {{ invoice.status }}. {% if invoice.send_method %}Last send method: {{ invoice.send_method }}.{% endif %}</p>
+  <p class="muted">A recorded payment is the reference you type. It is not a bank verification.</p>
+</article>
+<div class="no-print stack">
+  <p><a class="button secondary" href="{{ url_for('invoice_download', invoice_id=invoice.id) }}">Download PDF</a></p>
+  {% if invoice.status != "Paid" %}
+  <form method="post" action="{{ url_for('invoice_send', invoice_id=invoice.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <button type="submit">Email the invoice with PDF attached</button>
+  </form>
+  <form method="post" action="{{ url_for('invoice_send', invoice_id=invoice.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="manual" value="1">
+    <button class="secondary" type="submit">Mark sent outside the app</button>
+  </form>
+  <form class="row" method="post" action="{{ url_for('invoice_paid', invoice_id=invoice.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Payment reference <input name="reference" required></label>
+    <button type="submit">Record payment</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
