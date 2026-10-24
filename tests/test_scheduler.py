@@ -77,9 +77,79 @@ def test_text_endpoint_sends_each_employee_their_schedule(monkeypatch):
     ])
     scheduler.save_shifts("2026-11", {"e1": {"1": "D"}})
 
-    client = app_module.app.test_client()
+    client = admin_client(monkeypatch)
     res = client.post("/api/schedule/text", json={"month": "2026-11"})
     data = res.get_json()
     assert data["sent"] == ["Pat"]
     assert data["skipped"] == ["Sam (no phone)"]
     assert sent == [("480-555-1234", "Pat, your November 2026 schedule (8 hrs):\n11/1 7a-3p")]
+
+
+def admin_client(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_USERNAME", "boss")
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    res = client.post("/login", data={"username": "boss", "password": "s3cret"})
+    assert res.status_code == 302
+    return client
+
+
+def test_employees_cannot_change_or_text_schedule(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    save = client.post("/api/schedule", json={"month": "2026-11", "employees": [], "shifts": {}})
+    assert save.status_code == 403
+    text = client.post("/api/schedule/text", json={"month": "2026-11"})
+    assert text.status_code == 403
+    assert not (scheduler.SCHEDULE_DIR / "2026-11.json").exists()
+
+
+def test_wrong_password_does_not_log_in(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_USERNAME", "boss")
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    res = client.post("/login", data={"username": "boss", "password": "nope"})
+    assert res.status_code == 200
+    assert b"Wrong username or password" in res.data
+    assert client.post("/api/schedule", json={"month": "2026-11"}).status_code == 403
+
+
+def test_login_needs_a_configured_password(monkeypatch):
+    import auth
+
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    assert not auth.check_credentials("admin", "")
+
+
+def test_admin_can_save_and_employees_see_it_without_phones(monkeypatch):
+    import app as app_module
+
+    client = admin_client(monkeypatch)
+    res = client.post("/api/schedule", json={
+        "month": "2026-11",
+        "employees": [{"id": "e1", "name": "Pat", "phone": "480-555-1234"}],
+        "shifts": {"e1": {"1": "D"}},
+    })
+    assert res.status_code == 200
+    assert client.get("/api/schedule?month=2026-11").get_json()["employees"][0]["phone"] == "480-555-1234"
+
+    client.post("/logout")
+    view = client.get("/api/schedule?month=2026-11").get_json()
+    assert view["is_admin"] is False
+    assert view["employees"] == [{"id": "e1", "name": "Pat"}]
+    assert view["shifts"] == {"e1": {"1": "D"}}
+
+
+def test_login_redirect_stays_on_site():
+    import app as app_module
+
+    with app_module.app.test_request_context():
+        assert app_module._safe_next("/schedule?month=2026-11") == "/schedule?month=2026-11"
+        assert app_module._safe_next("https://evil.example") == "/schedule"
+        assert app_module._safe_next("//evil.example") == "/schedule"

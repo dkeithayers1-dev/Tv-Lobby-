@@ -120,7 +120,32 @@ Open `/schedule` for a monthly shift grid:
   plus how many people are on each shift that day. The right-hand
   **Hours** column shows each employee's total for the month.
 
-Press **Save** to keep your changes. Schedules are saved per month under
+### Administrator login
+
+Anyone who opens `/schedule` can **view** the schedule and print it. Only
+an administrator can change it: after signing in with **Admin login** (top
+right), the grid becomes editable and the Save, texting and employee/phone
+controls appear. Employees never see those controls or anyone's phone
+numbers, and the server refuses changes from anyone who isn't logged in as
+the administrator.
+
+Set the admin login and a secret key in `.env`:
+
+```
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=choose-a-strong-password
+FLASK_SECRET_KEY=<long random value>
+```
+
+Generate the secret key with
+`python -c "import secrets; print(secrets.token_hex(32))"`. It signs the
+login cookie, so keep it private. If it isn't set, the app picks a random
+one each time it starts, which still keeps logins safe, but logs the admin
+out whenever the app restarts. Until `ADMIN_PASSWORD` is set, nobody can
+log in, so the schedule stays view-only. If the app is reachable from the
+internet, run it behind HTTPS so the password isn't sent in the clear.
+
+As administrator, press **Save** to keep your changes. Schedules are saved per month under
 `instance/schedule/`, which is never committed to git, since the files
 include phone numbers. **Print** gives a landscape copy that fits one page.
 

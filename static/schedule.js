@@ -1,4 +1,6 @@
 const SHIFTS = window.SHIFTS;
+// Employees get a view-only grid; the server also rejects their saves.
+const IS_ADMIN = window.IS_ADMIN;
 const WORK_SHIFTS = Object.keys(SHIFTS).filter((c) => SHIFTS[c].hours > 0);
 
 const monthInput = document.getElementById('month');
@@ -12,7 +14,7 @@ let dirty = false;
 
 function setDirty(value) {
   dirty = value;
-  dirtyEl.textContent = value ? 'Unsaved changes' : '';
+  if (dirtyEl) dirtyEl.textContent = value ? 'Unsaved changes' : '';
 }
 
 function el(tag, attrs = {}, text) {
@@ -67,18 +69,22 @@ function render() {
   state.employees.forEach((emp) => {
     const tr = el('tr');
     const nameCell = el('th', { class: 'name-col', scope: 'row' });
-    const nameInput = el('input', { value: emp.name, 'data-emp': emp.id, 'aria-label': 'Employee name' });
-    nameInput.addEventListener('input', () => {
-      emp.name = nameInput.value;
-      setDirty(true);
-      renderRoster();
-    });
-    nameCell.appendChild(nameInput);
     tr.appendChild(nameCell);
+    if (!IS_ADMIN) nameCell.textContent = emp.name;
+    else {
+      const nameInput = el('input', { value: emp.name, 'data-emp': emp.id, 'aria-label': 'Employee name' });
+      nameInput.addEventListener('input', () => {
+        emp.name = nameInput.value;
+        setDirty(true);
+        renderRoster();
+      });
+      nameCell.appendChild(nameInput);
+    }
     state.days.forEach((d) => {
       const code = shiftFor(emp.id, d.day);
       const td = el('td', { class: code ? `shift-${code}` : '' });
-      td.appendChild(shiftSelect(emp.id, d.day));
+      if (IS_ADMIN) td.appendChild(shiftSelect(emp.id, d.day));
+      else td.textContent = code ? SHIFTS[code].label : '';
       tr.appendChild(td);
     });
     tr.appendChild(el('td', { class: 'total-col', 'data-emp-total': emp.id }));
@@ -144,6 +150,7 @@ function updateTotals() {
 }
 
 function renderRoster() {
+  if (!IS_ADMIN) return;
   rosterBody.innerHTML = '';
   state.employees.forEach((emp, i) => {
     const tr = el('tr');
@@ -234,19 +241,23 @@ monthInput.addEventListener('change', () => {
     return;
   }
   history.replaceState(null, '', `?month=${monthInput.value}`);
+  const logoutNext = document.getElementById('logout-next');
+  if (logoutNext) logoutNext.value = `/schedule?month=${monthInput.value}`;
   load(monthInput.value);
 });
-document.getElementById('save-btn').addEventListener('click', save);
-document.getElementById('text-all-btn').addEventListener('click', () => sendTexts([]));
 document.getElementById('print-btn').addEventListener('click', () => window.print());
-document.getElementById('add-emp-btn').addEventListener('click', () => {
-  const used = new Set(state.employees.map((e) => e.id));
-  let n = state.employees.length + 1;
-  while (used.has(`e${n}`)) n += 1;
-  state.employees.push({ id: `e${n}`, name: `Employee ${state.employees.length + 1}`, phone: '' });
-  setDirty(true);
-  render();
-});
+if (IS_ADMIN) {
+  document.getElementById('save-btn').addEventListener('click', save);
+  document.getElementById('text-all-btn').addEventListener('click', () => sendTexts([]));
+  document.getElementById('add-emp-btn').addEventListener('click', () => {
+    const used = new Set(state.employees.map((e) => e.id));
+    let n = state.employees.length + 1;
+    while (used.has(`e${n}`)) n += 1;
+    state.employees.push({ id: `e${n}`, name: `Employee ${state.employees.length + 1}`, phone: '' });
+    setDirty(true);
+    render();
+  });
+}
 window.addEventListener('beforeunload', (e) => {
   if (dirty) e.preventDefault();
 });

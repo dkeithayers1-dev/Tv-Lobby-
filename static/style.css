@@ -284,3 +284,17 @@ main.wide { max-width: none; }
   .schedule-table .name-col { min-width: 90px; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.login-form { max-width: 360px; margin: 24px auto; }
+.error { color: #dc2626; font-size: 0.9rem; margin: 10px 0 0; }

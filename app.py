@@ -1,13 +1,15 @@
 import os
+import secrets
 import uuid
 from datetime import date, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, render_template, send_file, abort
+from flask import Flask, jsonify, request, render_template, send_file, abort, redirect, url_for
 
 load_dotenv()
 
+import auth
 import emailer
 import expense_report
 import receipt_parser
@@ -23,7 +25,11 @@ MAX_UPLOAD_MB = 20
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
+# The secret key signs the admin login cookie. Without one set in .env, use a
+# random key so nobody can forge a login (logins then reset on restart).
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 # temp_id -> saved file path, cleared once committed or replaced
 PENDING_UPLOADS = {}
@@ -156,6 +162,36 @@ def report_send():
         return jsonify({"emailed": False, "error": str(exc)}), 500
 
 
+def _safe_next(target):
+    # Only redirect back to a page on this site after logging in.
+    if target and target.startswith("/") and not target.startswith("//"):
+        return target
+    return url_for("schedule_view")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    next_url = _safe_next(request.values.get("next"))
+    error = None
+    if request.method == "POST":
+        if auth.check_credentials(request.form.get("username"), request.form.get("password")):
+            auth.log_in()
+            return redirect(next_url)
+        error = "Wrong username or password."
+    return render_template(
+        "login.html",
+        error=error,
+        next_url=next_url,
+        auth_configured=auth.is_configured(),
+    )
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    auth.log_out()
+    return redirect(_safe_next(request.form.get("next")))
+
+
 @app.route("/schedule")
 def schedule_view():
     return render_template(
@@ -163,6 +199,7 @@ def schedule_view():
         month=request.args.get("month") or date.today().strftime("%Y-%m"),
         shifts=scheduler.SHIFTS,
         sms_configured=sms.is_configured(),
+        is_admin=auth.is_admin(),
     )
 
 
@@ -174,15 +211,21 @@ def api_schedule_get():
         shifts = scheduler.load_shifts(month)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+    employees = scheduler.load_roster()
+    if not auth.is_admin():
+        # Employees can see the schedule, but not each other's phone numbers.
+        employees = [{"id": e["id"], "name": e["name"]} for e in employees]
     return jsonify({
         "month": month,
         "days": days,
-        "employees": scheduler.load_roster(),
+        "employees": employees,
         "shifts": shifts,
+        "is_admin": auth.is_admin(),
     })
 
 
 @app.route("/api/schedule", methods=["POST"])
+@auth.admin_required
 def api_schedule_save():
     payload = request.get_json(force=True, silent=True) or {}
     month = payload.get("month") or ""
@@ -198,6 +241,7 @@ def api_schedule_save():
 
 
 @app.route("/api/schedule/text", methods=["POST"])
+@auth.admin_required
 def api_schedule_text():
     """Text each selected employee their saved shifts for the month."""
     payload = request.get_json(force=True, silent=True) or {}
