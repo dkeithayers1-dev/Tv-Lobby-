@@ -11,6 +11,8 @@ load_dotenv()
 import emailer
 import expense_report
 import receipt_parser
+import scheduler
+import sms
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
@@ -152,6 +154,77 @@ def report_send():
         return jsonify({"emailed": False, "error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"emailed": False, "error": str(exc)}), 500
+
+
+@app.route("/schedule")
+def schedule_view():
+    return render_template(
+        "schedule.html",
+        month=request.args.get("month") or date.today().strftime("%Y-%m"),
+        shifts=scheduler.SHIFTS,
+        sms_configured=sms.is_configured(),
+    )
+
+
+@app.route("/api/schedule")
+def api_schedule_get():
+    month = request.args.get("month") or date.today().strftime("%Y-%m")
+    try:
+        days = scheduler.day_headers(month)
+        shifts = scheduler.load_shifts(month)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({
+        "month": month,
+        "days": days,
+        "employees": scheduler.load_roster(),
+        "shifts": shifts,
+    })
+
+
+@app.route("/api/schedule", methods=["POST"])
+def api_schedule_save():
+    payload = request.get_json(force=True, silent=True) or {}
+    month = payload.get("month") or ""
+    try:
+        employees = scheduler.save_roster(payload.get("employees") or [])
+        shifts = scheduler.save_shifts(month, payload.get("shifts") or {})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({
+        "saved": True,
+        "totals": scheduler.daily_totals(month, employees, shifts),
+    })
+
+
+@app.route("/api/schedule/text", methods=["POST"])
+def api_schedule_text():
+    """Text each selected employee their saved shifts for the month."""
+    payload = request.get_json(force=True, silent=True) or {}
+    month = payload.get("month") or ""
+    wanted = set(payload.get("employee_ids") or [])
+    try:
+        shifts = scheduler.load_shifts(month)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not sms.is_configured():
+        return jsonify({"error": "Twilio is not configured. See README."}), 400
+
+    sent, skipped, errors = [], [], []
+    for emp in scheduler.load_roster():
+        if wanted and emp["id"] not in wanted:
+            continue
+        if not emp["phone"]:
+            skipped.append(f"{emp['name']} (no phone)")
+            continue
+        body = scheduler.schedule_text(month, emp, shifts.get(emp["id"]))
+        try:
+            sms.send_sms(emp["phone"], body)
+            sent.append(emp["name"])
+        except Exception as exc:
+            errors.append(f"{emp['name']}: {exc}")
+
+    return jsonify({"sent": sent, "skipped": skipped, "errors": errors})
 
 
 if __name__ == "__main__":

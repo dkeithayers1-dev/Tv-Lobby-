@@ -104,6 +104,53 @@ recreate it from the blank template on the next expense you add. There's
 room for 18 expense rows (rows 13–30) per report before you need to start
 a new one.
 
+## Employee schedule
+
+Open `/schedule` for a monthly shift grid:
+
+- **Top row:** every day of the selected month (weekends are shaded).
+- **First column (from row 2 down):** employee names, 35 to start
+  ("Employee 1"–"Employee 35"). Click a name to rename it. Add or remove
+  employees, and enter their mobile numbers, under **Employees & phone
+  numbers** below the grid.
+- **Cells:** pick a shift: **7a-3p**, **3p-11p**, **11p-7a** or **Off**. You can
+  also click a cell and type `7`, `3`, `1` or `O`, then press Tab to move
+  to the next day.
+- **Bottom rows:** total scheduled hours for each day (8 hours per shift),
+  plus how many people are on each shift that day. The right-hand
+  **Hours** column shows each employee's total for the month.
+
+Press **Save** to keep your changes. Schedules are saved per month under
+`instance/schedule/`, which is never committed to git, since the files
+include phone numbers. **Print** gives a landscape copy that fits one page.
+
+### Texting schedules with Twilio
+
+**Text everyone their schedule** (or the **Text** button next to one
+employee) sends each employee with a phone number a message like:
+
+```
+Jane Smith, your November 2026 schedule (40 hrs):
+11/1 7a-3p
+11/2 7a-3p
+...
+```
+
+To turn it on, add these to `.env` from your Twilio Console
+(<https://console.twilio.com>):
+
+```
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=+14805551234
+```
+
+US numbers can be typed any way, e.g. `(480) 555-1234`. Put a `+` and the
+country code in front of numbers outside the US. Note that Twilio requires
+US senders to complete **A2P 10DLC registration** (or use a verified
+toll-free number) before texts are delivered reliably, and a trial account
+can only text numbers you've verified in the console.
+
 ## Running the tests
 
 ```bash
