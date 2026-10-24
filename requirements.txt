@@ -5,3 +5,5 @@ pytesseract==0.3.13
 Pillow==10.4.0
 pillow-heif==0.18.0
 python-dotenv==1.0.1
+twilio==9.12.0
+fpdf2==2.8.9

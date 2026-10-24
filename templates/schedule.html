@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee Schedule</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Employee Schedule</h1>
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="next" id="logout-next" value="{{ request.full_path }}">
+      <span class="hint">Administrator</span>
+      <button class="link-btn" type="submit">Log out</button>
+    </form>
+    {% else %}
+    <a class="link" href="{{ url_for('login', next=request.full_path) }}">Admin login</a>
+    {% endif %}
+  </header>
+
+  {% if is_admin and not sms_configured %}
+  <div class="banner">
+    Text messages aren't set up yet. Add your Twilio details to <code>.env</code>
+    (see README) to text employees their schedules.
+  </div>
+  {% endif %}
+
+  <main class="wide">
+    <div class="schedule-toolbar">
+      <label>Month <input type="month" id="month" value="{{ month }}"></label>
+      <span class="legend">
+        {% for code, s in shifts.items() %}
+        <span class="shift-{{ code }}">{{ s.label }}</span>
+        {% endfor %}
+      </span>
+      {% if is_admin %}
+      <span id="dirty" class="hint"></span>
+      <button id="save-btn" class="small-btn">Save</button>
+      <button id="text-all-btn" class="small-btn" {% if not sms_configured %}disabled title="Twilio not configured"{% endif %}>
+        Text everyone their schedule
+      </button>
+      {% else %}
+      <span class="hint">View only. Ask an administrator to make changes.</span>
+      {% endif %}
+      <a id="download-btn" class="small-btn" href="{{ url_for('schedule_download', month=month) }}">Download PDF</a>
+      <button id="print-btn" class="small-btn secondary">Print</button>
+    </div>
+    <div id="status"></div>
+
+    <div class="grid-wrap">
+      <table id="schedule" class="schedule-table"></table>
+    </div>
+    {% if is_admin %}
+    <p class="hint">
+      Tip: click a cell and type <b>7</b> (7a-3p), <b>3</b> (3p-11p), <b>1</b> (11p-7a)
+      or <b>O</b> (Off); Tab moves to the next day.
+    </p>
+
+    <details class="roster">
+      <summary>Employees &amp; phone numbers</summary>
+      <table class="report-table">
+        <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th></th></tr></thead>
+        <tbody id="roster-body"></tbody>
+      </table>
+      <button id="add-emp-btn" class="small-btn secondary">+ Add employee</button>
+    </details>
+    {% endif %}
+  </main>
+
+  <script>
+    window.SHIFTS = {{ shifts | tojson }};
+    window.SMS_CONFIGURED = {{ sms_configured | tojson }};
+    window.IS_ADMIN = {{ is_admin | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='schedule.js') }}"></script>
+</body>
+</html>

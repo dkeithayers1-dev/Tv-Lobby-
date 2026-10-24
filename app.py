@@ -1,16 +1,22 @@
 import os
+import secrets
 import uuid
 from datetime import date, datetime
+from io import BytesIO
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, render_template, send_file, abort
+from flask import Flask, jsonify, request, render_template, send_file, abort, redirect, url_for
 
 load_dotenv()
 
+import auth
 import emailer
 import expense_report
 import receipt_parser
+import schedule_pdf
+import scheduler
+import sms
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
@@ -21,7 +27,11 @@ MAX_UPLOAD_MB = 20
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-secret")
+# The secret key signs the admin login cookie. Without one set in .env, use a
+# random key so nobody can forge a login (logins then reset on restart).
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 # temp_id -> saved file path, cleared once committed or replaced
 PENDING_UPLOADS = {}
@@ -152,6 +162,135 @@ def report_send():
         return jsonify({"emailed": False, "error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"emailed": False, "error": str(exc)}), 500
+
+
+def _safe_next(target):
+    # Only redirect back to a page on this site after logging in.
+    if target and target.startswith("/") and not target.startswith("//"):
+        return target
+    return url_for("schedule_view")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    next_url = _safe_next(request.values.get("next"))
+    error = None
+    if request.method == "POST":
+        if auth.check_credentials(request.form.get("username"), request.form.get("password")):
+            auth.log_in()
+            return redirect(next_url)
+        error = "Wrong username or password."
+    return render_template(
+        "login.html",
+        error=error,
+        next_url=next_url,
+        auth_configured=auth.is_configured(),
+    )
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    auth.log_out()
+    return redirect(_safe_next(request.form.get("next")))
+
+
+@app.route("/schedule")
+def schedule_view():
+    return render_template(
+        "schedule.html",
+        month=request.args.get("month") or date.today().strftime("%Y-%m"),
+        shifts=scheduler.SHIFTS,
+        sms_configured=sms.is_configured(),
+        is_admin=auth.is_admin(),
+    )
+
+
+@app.route("/api/schedule")
+def api_schedule_get():
+    month = request.args.get("month") or date.today().strftime("%Y-%m")
+    try:
+        days = scheduler.day_headers(month)
+        shifts = scheduler.load_shifts(month)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    employees = scheduler.load_roster()
+    if not auth.is_admin():
+        # Employees can see the schedule, but not each other's phone numbers.
+        employees = [{"id": e["id"], "name": e["name"]} for e in employees]
+    return jsonify({
+        "month": month,
+        "days": days,
+        "employees": employees,
+        "shifts": shifts,
+        "is_admin": auth.is_admin(),
+    })
+
+
+@app.route("/schedule/download")
+def schedule_download():
+    """The month's schedule as a PDF employees can save on their phones."""
+    month = request.args.get("month") or date.today().strftime("%Y-%m")
+    try:
+        pdf_bytes = schedule_pdf.build_pdf(month)
+    except ValueError as exc:
+        abort(400, str(exc))
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"schedule-{month}.pdf",
+    )
+
+
+@app.route("/api/schedule", methods=["POST"])
+@auth.admin_required
+def api_schedule_save():
+    payload = request.get_json(force=True, silent=True) or {}
+    month = payload.get("month") or ""
+    try:
+        employees = scheduler.save_roster(payload.get("employees") or [])
+        shifts = scheduler.save_shifts(month, payload.get("shifts") or {})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({
+        "saved": True,
+        "totals": scheduler.daily_totals(month, employees, shifts),
+    })
+
+
+@app.route("/api/schedule/text", methods=["POST"])
+@auth.admin_required
+def api_schedule_text():
+    """Text each selected employee their saved shifts for the month."""
+    payload = request.get_json(force=True, silent=True) or {}
+    month = payload.get("month") or ""
+    wanted = set(payload.get("employee_ids") or [])
+    try:
+        shifts = scheduler.load_shifts(month)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not sms.is_configured():
+        return jsonify({"error": "Twilio is not configured. See README."}), 400
+
+    # Set PUBLIC_URL once the app has a web address employees can reach.
+    public_url = os.environ.get("PUBLIC_URL", "").rstrip("/")
+    sent, skipped, errors = [], [], []
+    for emp in scheduler.load_roster():
+        if wanted and emp["id"] not in wanted:
+            continue
+        if not emp["phone"]:
+            skipped.append(f"{emp['name']} (no phone)")
+            continue
+        body = scheduler.schedule_text(month, emp, shifts.get(emp["id"]))
+        if public_url:
+            body += f"\nFull schedule: {public_url}/schedule/download?month={month}"
+        try:
+            sms.send_sms(emp["phone"], body)
+            sent.append(emp["name"])
+        except Exception as exc:
+            errors.append(f"{emp['name']}: {exc}")
+
+    return jsonify({"sent": sent, "skipped": skipped, "errors": errors})
 
 
 if __name__ == "__main__":

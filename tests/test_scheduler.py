@@ -1,0 +1,181 @@
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import scheduler
+import sms
+
+
+@pytest.fixture(autouse=True)
+def tmp_schedule_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(scheduler, "SCHEDULE_DIR", tmp_path)
+    monkeypatch.setattr(scheduler, "ROSTER_PATH", tmp_path / "employees.json")
+
+
+def test_day_headers():
+    days = scheduler.day_headers("2026-02")
+    assert len(days) == 28
+    assert days[0] == {"day": 1, "weekday": "Sun"}
+
+
+def test_default_roster_has_35_employees():
+    roster = scheduler.load_roster()
+    assert len(roster) == 35
+    assert roster[0]["name"] == "Employee 1"
+
+
+def test_save_and_load_shifts_drops_blanks():
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D", "2": "", "3": "OFF"}, "e2": {"1": ""}})
+    assert scheduler.load_shifts("2026-11") == {"e1": {"1": "D", "3": "OFF"}}
+
+
+def test_save_shifts_rejects_bad_input():
+    with pytest.raises(ValueError):
+        scheduler.save_shifts("2026-11", {"e1": {"1": "X"}})
+    with pytest.raises(ValueError):
+        scheduler.save_shifts("2026-11", {"e1": {"31": "D"}})
+    with pytest.raises(ValueError):
+        scheduler.save_shifts("2026-13", {})
+
+
+def test_daily_totals():
+    roster = scheduler.default_roster()
+    shifts = {"e1": {"1": "D"}, "e2": {"1": "E"}, "e3": {"1": "N", "2": "OFF"}, "e4": {"1": "D"}}
+    totals = scheduler.daily_totals("2026-11", roster, shifts)
+    assert totals[0]["hours"] == 32
+    assert totals[0]["counts"]["D"] == 2
+    assert totals[1]["hours"] == 0
+
+
+def test_schedule_text():
+    emp = {"id": "e1", "name": "Pat"}
+    text = scheduler.schedule_text("2026-11", emp, {"3": "N", "1": "D", "2": "OFF"})
+    assert text == "Pat, your November 2026 schedule (16 hrs):\n11/1 7a-3p\n11/3 11p-7a"
+    assert "no shifts" in scheduler.schedule_text("2026-11", emp, {})
+
+
+def test_normalize_phone():
+    assert sms.normalize_phone("(480) 555-1234") == "+14805551234"
+    assert sms.normalize_phone("1-480-555-1234") == "+14805551234"
+    assert sms.normalize_phone("+44 20 7946 0958") == "+442079460958"
+    with pytest.raises(ValueError):
+        sms.normalize_phone("555-1234")
+
+
+def test_text_endpoint_sends_each_employee_their_schedule(monkeypatch):
+    import app as app_module
+
+    sent = []
+    monkeypatch.setattr(sms, "is_configured", lambda: True)
+    monkeypatch.setattr(sms, "send_sms", lambda to, body: sent.append((to, body)) or "SM1")
+    scheduler.save_roster([
+        {"id": "e1", "name": "Pat", "phone": "480-555-1234"},
+        {"id": "e2", "name": "Sam", "phone": ""},
+    ])
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D"}})
+
+    client = admin_client(monkeypatch)
+    res = client.post("/api/schedule/text", json={"month": "2026-11"})
+    data = res.get_json()
+    assert data["sent"] == ["Pat"]
+    assert data["skipped"] == ["Sam (no phone)"]
+    assert sent == [("480-555-1234", "Pat, your November 2026 schedule (8 hrs):\n11/1 7a-3p")]
+
+
+def admin_client(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_USERNAME", "boss")
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    res = client.post("/login", data={"username": "boss", "password": "s3cret"})
+    assert res.status_code == 302
+    return client
+
+
+def test_employees_cannot_change_or_text_schedule(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    save = client.post("/api/schedule", json={"month": "2026-11", "employees": [], "shifts": {}})
+    assert save.status_code == 403
+    text = client.post("/api/schedule/text", json={"month": "2026-11"})
+    assert text.status_code == 403
+    assert not (scheduler.SCHEDULE_DIR / "2026-11.json").exists()
+
+
+def test_wrong_password_does_not_log_in(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setenv("ADMIN_USERNAME", "boss")
+    monkeypatch.setenv("ADMIN_PASSWORD", "s3cret")
+    client = app_module.app.test_client()
+    res = client.post("/login", data={"username": "boss", "password": "nope"})
+    assert res.status_code == 200
+    assert b"Wrong username or password" in res.data
+    assert client.post("/api/schedule", json={"month": "2026-11"}).status_code == 403
+
+
+def test_login_needs_a_configured_password(monkeypatch):
+    import auth
+
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    assert not auth.check_credentials("admin", "")
+
+
+def test_admin_can_save_and_employees_see_it_without_phones(monkeypatch):
+    import app as app_module
+
+    client = admin_client(monkeypatch)
+    res = client.post("/api/schedule", json={
+        "month": "2026-11",
+        "employees": [{"id": "e1", "name": "Pat", "phone": "480-555-1234"}],
+        "shifts": {"e1": {"1": "D"}},
+    })
+    assert res.status_code == 200
+    assert client.get("/api/schedule?month=2026-11").get_json()["employees"][0]["phone"] == "480-555-1234"
+
+    client.post("/logout")
+    view = client.get("/api/schedule?month=2026-11").get_json()
+    assert view["is_admin"] is False
+    assert view["employees"] == [{"id": "e1", "name": "Pat"}]
+    assert view["shifts"] == {"e1": {"1": "D"}}
+
+
+def test_login_redirect_stays_on_site():
+    import app as app_module
+
+    with app_module.app.test_request_context():
+        assert app_module._safe_next("/schedule?month=2026-11") == "/schedule?month=2026-11"
+        assert app_module._safe_next("https://evil.example") == "/schedule"
+        assert app_module._safe_next("//evil.example") == "/schedule"
+
+
+def test_anyone_can_download_schedule_pdf():
+    import app as app_module
+
+    scheduler.save_roster([{"id": "e1", "name": "José", "phone": "480-555-1234"}])
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D", "2": "N"}})
+    client = app_module.app.test_client()
+    res = client.get("/schedule/download?month=2026-11")
+    assert res.status_code == 200
+    assert res.mimetype == "application/pdf"
+    assert res.data.startswith(b"%PDF")
+    assert "schedule-2026-11.pdf" in res.headers["Content-Disposition"]
+    assert client.get("/schedule/download?month=bad").status_code == 400
+
+
+def test_text_includes_download_link_when_public_url_set(monkeypatch):
+    sent = []
+    monkeypatch.setenv("PUBLIC_URL", "https://sched.example.com/")
+    monkeypatch.setattr(sms, "is_configured", lambda: True)
+    monkeypatch.setattr(sms, "send_sms", lambda to, body: sent.append(body) or "SM1")
+    scheduler.save_roster([{"id": "e1", "name": "Pat", "phone": "480-555-1234"}])
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D"}})
+
+    admin_client(monkeypatch).post("/api/schedule/text", json={"month": "2026-11"})
+    assert sent[0].endswith("\nFull schedule: https://sched.example.com/schedule/download?month=2026-11")

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administrator Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Administrator Login</h1>
+    <a class="link" href="{{ url_for('schedule_view') }}">View schedule</a>
+  </header>
+
+  {% if not auth_configured %}
+  <div class="banner">
+    No administrator password is set yet. Add <code>ADMIN_PASSWORD</code> to
+    <code>.env</code> (see README) and restart the app.
+  </div>
+  {% endif %}
+
+  <main>
+    <form class="receipt-card login-form" method="post" action="{{ url_for('login') }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <button class="primary-btn" type="submit" {% if not auth_configured %}disabled{% endif %}>Log in</button>
+    </form>
+  </main>
+</body>
+</html>
