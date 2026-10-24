@@ -186,6 +186,7 @@ main.wide { max-width: none; }
   cursor: pointer;
   font-size: 0.9rem;
 }
+.small-btn { text-decoration: none; display: inline-block; }
 .small-btn.secondary { background: var(--card-bg); color: var(--accent); border: 1px solid var(--border); }
 .small-btn:disabled { background: #9ca3af; color: white; cursor: not-allowed; }
 

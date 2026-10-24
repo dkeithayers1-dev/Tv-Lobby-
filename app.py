@@ -2,6 +2,7 @@ import os
 import secrets
 import uuid
 from datetime import date, datetime
+from io import BytesIO
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ import auth
 import emailer
 import expense_report
 import receipt_parser
+import schedule_pdf
 import scheduler
 import sms
 
@@ -224,6 +226,22 @@ def api_schedule_get():
     })
 
 
+@app.route("/schedule/download")
+def schedule_download():
+    """The month's schedule as a PDF employees can save on their phones."""
+    month = request.args.get("month") or date.today().strftime("%Y-%m")
+    try:
+        pdf_bytes = schedule_pdf.build_pdf(month)
+    except ValueError as exc:
+        abort(400, str(exc))
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"schedule-{month}.pdf",
+    )
+
+
 @app.route("/api/schedule", methods=["POST"])
 @auth.admin_required
 def api_schedule_save():
@@ -254,6 +272,8 @@ def api_schedule_text():
     if not sms.is_configured():
         return jsonify({"error": "Twilio is not configured. See README."}), 400
 
+    # Set PUBLIC_URL once the app has a web address employees can reach.
+    public_url = os.environ.get("PUBLIC_URL", "").rstrip("/")
     sent, skipped, errors = [], [], []
     for emp in scheduler.load_roster():
         if wanted and emp["id"] not in wanted:
@@ -262,6 +282,8 @@ def api_schedule_text():
             skipped.append(f"{emp['name']} (no phone)")
             continue
         body = scheduler.schedule_text(month, emp, shifts.get(emp["id"]))
+        if public_url:
+            body += f"\nFull schedule: {public_url}/schedule/download?month={month}"
         try:
             sms.send_sms(emp["phone"], body)
             sent.append(emp["name"])

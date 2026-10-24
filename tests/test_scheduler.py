@@ -153,3 +153,29 @@ def test_login_redirect_stays_on_site():
         assert app_module._safe_next("/schedule?month=2026-11") == "/schedule?month=2026-11"
         assert app_module._safe_next("https://evil.example") == "/schedule"
         assert app_module._safe_next("//evil.example") == "/schedule"
+
+
+def test_anyone_can_download_schedule_pdf():
+    import app as app_module
+
+    scheduler.save_roster([{"id": "e1", "name": "José", "phone": "480-555-1234"}])
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D", "2": "N"}})
+    client = app_module.app.test_client()
+    res = client.get("/schedule/download?month=2026-11")
+    assert res.status_code == 200
+    assert res.mimetype == "application/pdf"
+    assert res.data.startswith(b"%PDF")
+    assert "schedule-2026-11.pdf" in res.headers["Content-Disposition"]
+    assert client.get("/schedule/download?month=bad").status_code == 400
+
+
+def test_text_includes_download_link_when_public_url_set(monkeypatch):
+    sent = []
+    monkeypatch.setenv("PUBLIC_URL", "https://sched.example.com/")
+    monkeypatch.setattr(sms, "is_configured", lambda: True)
+    monkeypatch.setattr(sms, "send_sms", lambda to, body: sent.append(body) or "SM1")
+    scheduler.save_roster([{"id": "e1", "name": "Pat", "phone": "480-555-1234"}])
+    scheduler.save_shifts("2026-11", {"e1": {"1": "D"}})
+
+    admin_client(monkeypatch).post("/api/schedule/text", json={"month": "2026-11"})
+    assert sent[0].endswith("\nFull schedule: https://sched.example.com/schedule/download?month=2026-11")

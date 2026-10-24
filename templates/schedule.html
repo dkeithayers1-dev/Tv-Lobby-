@@ -44,6 +44,7 @@
       {% else %}
       <span class="hint">View only. Ask an administrator to make changes.</span>
       {% endif %}
+      <a id="download-btn" class="small-btn" href="{{ url_for('schedule_download', month=month) }}">Download PDF</a>
       <button id="print-btn" class="small-btn secondary">Print</button>
     </div>
     <div id="status"></div>

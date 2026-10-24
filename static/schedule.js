@@ -241,11 +241,19 @@ monthInput.addEventListener('change', () => {
     return;
   }
   history.replaceState(null, '', `?month=${monthInput.value}`);
+  document.getElementById('download-btn').href = `/schedule/download?month=${monthInput.value}`;
   const logoutNext = document.getElementById('logout-next');
   if (logoutNext) logoutNext.value = `/schedule?month=${monthInput.value}`;
   load(monthInput.value);
 });
 document.getElementById('print-btn').addEventListener('click', () => window.print());
+document.getElementById('download-btn').addEventListener('click', async (e) => {
+  // The PDF is built from the saved schedule, so save pending edits first.
+  if (!dirty) return;
+  e.preventDefault();
+  const href = e.currentTarget.href;
+  if (await save()) window.location.href = href;
+});
 if (IS_ADMIN) {
   document.getElementById('save-btn').addEventListener('click', save);
   document.getElementById('text-all-btn').addEventListener('click', () => sendTexts([]));

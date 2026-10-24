@@ -149,6 +149,24 @@ As administrator, press **Save** to keep your changes. Schedules are saved per m
 `instance/schedule/`, which is never committed to git, since the files
 include phone numbers. **Print** gives a landscape copy that fits one page.
 
+### Downloading the schedule to a phone
+
+**Download PDF** (next to Print) saves the month as a one-page PDF, laid
+out like the grid: days across the top, one employee per row, and the
+daily totals at the bottom. It's on the view-only page too, so employees
+can download it themselves without logging in. The PDF never includes
+phone numbers. Shifts are shortened to fit: **7-3** = 7a-3p,
+**3-11** = 3p-11p, **11-7** = 11p-7a.
+
+On an iPhone, open the PDF and tap Share, then **Save to Files** (or
+**Books**). On Android, it lands in the Downloads folder. Employees can
+open it any time without signal, but it won't change on its own: if the
+schedule changes, they need to download it again.
+
+If `PUBLIC_URL` is set in `.env` (the address employees use to reach the
+app), each schedule text ends with a link to the PDF, so employees can
+download it straight from the message.
+
 ### Texting schedules with Twilio
 
 **Text everyone their schedule** (or the **Text** button next to one
