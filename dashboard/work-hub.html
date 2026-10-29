@@ -1,0 +1,1109 @@
+<title>Work Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Figma-style editor shell. Dark toolbar, layers panel, dot-grid canvas of frames, inspector panel. */
+:root {
+  --chrome: #2c2c2c;        /* toolbar */
+  --chrome-fg: #f5f5f5;
+  --chrome-dim: #a8a8a8;
+  --panel: #ffffff;
+  --panel-2: #f7f7f8;
+  --line: #e6e6e8;
+  --canvas: #f0f0f2;
+  --dot: #d3d3d8;
+  --fg: #1e1e20;
+  --fg-2: #5c5c66;
+  --fg-3: #8d8d97;
+  --frame: #ffffff;
+  --accent: #0d99ff;        /* selection blue */
+  --accent-soft: #e5f4ff;
+  --accent-fg: #ffffff;
+  --ok: #14ae5c;
+  --ok-soft: #e3f6ec;
+  --warn: #c27a00;
+  --warn-soft: #fff3d6;
+  --bad: #e5484d;
+  --bad-soft: #fde8e9;
+  --muted-soft: #eeeef1;
+  --sticky-ink: #1e1e20;
+  --s-yellow: #ffe299; --s-green: #b3efbd; --s-blue: #b4dcff;
+  --s-pink: #ffc7de; --s-purple: #dcccff; --s-orange: #ffc49c;
+  --shadow: 0 1px 2px rgba(20,20,30,.06), 0 4px 14px rgba(20,20,30,.06);
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --chrome: #1b1b1d; --chrome-fg: #f5f5f5; --chrome-dim: #9a9aa3;
+  --panel: #2c2c2e; --panel-2: #333336; --line: #414146;
+  --canvas: #1e1e20; --dot: #3a3a3f;
+  --fg: #f2f2f4; --fg-2: #b5b5bd; --fg-3: #8a8a94;
+  --frame: #2a2a2d; --accent: #2ea6ff; --accent-soft: #10324d; --accent-fg: #ffffff;
+  --ok: #3dd68c; --ok-soft: #133a26; --warn: #f5b445; --warn-soft: #3d2f12;
+  --bad: #ff6b70; --bad-soft: #451c1e; --muted-soft: #38383c;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --chrome: #1b1b1d; --chrome-fg: #f5f5f5; --chrome-dim: #9a9aa3;
+  --panel: #2c2c2e; --panel-2: #333336; --line: #414146;
+  --canvas: #1e1e20; --dot: #3a3a3f;
+  --fg: #f2f2f4; --fg-2: #b5b5bd; --fg-3: #8a8a94;
+  --frame: #2a2a2d; --accent: #2ea6ff; --accent-soft: #10324d; --accent-fg: #ffffff;
+  --ok: #3dd68c; --ok-soft: #133a26; --warn: #f5b445; --warn-soft: #3d2f12;
+  --bad: #ff6b70; --bad-soft: #451c1e; --muted-soft: #38383c;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--canvas); color: var(--fg); font-family: var(--font); font-size: 13px; overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { height: 100%; display: grid; grid-template-rows: 44px auto 1fr; }
+
+/* toolbar */
+.toolbar { background: var(--chrome); color: var(--chrome-fg); display: flex; align-items: center; gap: 4px;
+  padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); min-width: 0; }
+.tb-btn { background: none; border: 0; height: 32px; min-width: 32px; padding: 0 8px; border-radius: 6px; color: var(--chrome-fg);
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.tb-btn:hover { background: rgba(255,255,255,.08); }
+.tb-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.tb-btn svg { width: 16px; height: 16px; flex: none; }
+.tb-sep { width: 1px; height: 20px; background: rgba(255,255,255,.14); margin: 0 4px; }
+.tb-title { flex: 1; min-width: 0; text-align: center; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-title b { font-weight: 500; }
+.tb-title span { color: var(--chrome-dim); }
+.live-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--chrome-dim); padding: 0 8px; white-space: nowrap; }
+.live-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--chrome-dim); }
+.live-pill[data-state="live"] i { background: #14ae5c; box-shadow: 0 0 0 3px rgba(20,174,92,.25); }
+.live-pill[data-state="loading"] i { background: #f5b445; animation: pulse 1s infinite; }
+.live-pill[data-state="error"] i { background: #e5484d; }
+@keyframes pulse { 50% { opacity: .35; } }
+.zoom { font-family: var(--mono); font-size: 11px; color: var(--chrome-fg); }
+
+/* page chips (narrow screens) */
+.chips { display: none; gap: 6px; overflow-x: auto; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); scrollbar-width: none; }
+.chips button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 11px; font-size: 12px; white-space: nowrap; }
+.chips button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+.workspace { display: grid; grid-template-columns: 232px minmax(0,1fr) 288px; min-height: 0; }
+
+/* panels */
+.panel { background: var(--panel); min-height: 0; overflow-y: auto; }
+.left { border-right: 1px solid var(--line); }
+.right { border-left: 1px solid var(--line); }
+.p-sec { padding: 12px 12px 14px; border-bottom: 1px solid var(--line); }
+.p-head { font-size: 11px; font-weight: 600; color: var(--fg); margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.p-head span { color: var(--fg-3); font-weight: 400; }
+.layer { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 5px 8px; border-radius: 4px; text-align: left; font-size: 12px; color: var(--fg); }
+.layer:hover { background: var(--panel-2); }
+.layer.on { background: var(--accent-soft); color: var(--fg); }
+.layer .ic { color: var(--fg-3); width: 14px; flex: none; text-align: center; font-family: var(--mono); font-size: 11px; }
+.layer.child { padding-left: 28px; color: var(--fg-2); }
+.layer .ct { margin-left: auto; color: var(--fg-3); font-family: var(--mono); font-size: 11px; }
+.layer .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* inspector */
+.ins-title { font-size: 14px; font-weight: 600; line-height: 1.3; margin: 0 0 4px; text-wrap: balance; }
+.ins-sub { color: var(--fg-2); font-size: 12px; margin: 0; }
+.prop { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 4px 10px; font-size: 12px; margin: 0; }
+.prop dt { color: var(--fg-3); }
+.prop dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ins-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { background: var(--panel-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .5; cursor: default; }
+.prompt-prev { font-family: var(--mono); font-size: 11px; color: var(--fg-2); background: var(--panel-2); border-radius: 6px; padding: 8px; white-space: pre-wrap; max-height: 180px; overflow: auto; margin: 0; }
+.confirm { border: 1px solid var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 8px; font-size: 12px; margin-top: 8px; }
+.confirm p { margin: 0 0 8px; }
+.note { font-size: 11px; color: var(--fg-3); margin: 6px 0 0; }
+.ins-close { display: none; }
+
+/* canvas */
+.canvas { position: relative; overflow: auto; min-height: 0;
+  background-color: var(--canvas);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+  background-size: 20px 20px; }
+.board { padding: 36px max(24px, env(safe-area-inset-right, 0px)) 120px max(24px, env(safe-area-inset-left, 0px));
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 40px; max-width: 1240px; margin: 0 auto; transform-origin: top center; }
+.fwrap { min-width: 0; position: relative; }
+.fwrap.wide { grid-column: 1 / -1; }
+.f-label { border: 0; background: none; padding: 0 0 6px; font-size: 11px; color: var(--fg-2); display: inline-flex; align-items: center; gap: 6px; }
+.f-label:hover, .fwrap.sel .f-label { color: var(--accent); }
+.f-label svg { width: 11px; height: 11px; }
+.frame { background: var(--frame); border-radius: 2px; box-shadow: var(--shadow); padding: 20px; position: relative; min-width: 0; }
+.fwrap.sel .frame { outline: 1.5px solid var(--accent); }
+.handle { display: none; position: absolute; width: 8px; height: 8px; background: #fff; border: 1.5px solid var(--accent); }
+.fwrap.sel .handle { display: block; }
+.h-tl { top: -4px; left: -4px; } .h-tr { top: -4px; right: -4px; } .h-bl { bottom: -4px; left: -4px; } .h-br { bottom: -4px; right: -4px; }
+.size-badge { display: none; position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); background: var(--accent); color: var(--accent-fg);
+  font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+.fwrap.sel .size-badge { display: block; }
+.f-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.f-h h2 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.f-h .src { font-size: 11px; color: var(--fg-3); }
+.sec-err { font-size: 12px; color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; }
+
+/* kpis */
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; margin-bottom: 18px; }
+.kpi { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; background: var(--frame); text-align: left; }
+button.kpi:hover { border-color: var(--accent); }
+.kpi .k { font-size: 11px; color: var(--fg-2); }
+.kpi .v { font-size: 26px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin-top: 4px; line-height: 1.1; }
+.kpi .v small { font-size: 13px; color: var(--fg-3); font-weight: 500; }
+.kpi .d { font-size: 11px; color: var(--fg-3); margin-top: 4px; }
+.cols { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 20px; }
+.sub-h { font-size: 12px; font-weight: 600; margin: 0 0 8px; color: var(--fg); }
+.att { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.att li { display: grid; grid-template-columns: 4px minmax(0,1fr); gap: 10px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.att li > i { background: var(--fg-3); }
+.att li[data-sev="bad"] > i { background: var(--bad); }
+.att li[data-sev="warn"] > i { background: var(--warn); }
+.att li[data-sev="info"] > i { background: var(--accent); }
+.att button { border: 0; background: none; text-align: left; padding: 8px 10px 8px 0; min-width: 0; }
+.att b { font-weight: 500; display: block; font-size: 12px; }
+.att span { color: var(--fg-2); font-size: 11px; }
+
+/* timeline */
+.tl { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 8px; }
+.tl-axis, .tl-row .track { position: relative; height: 18px; }
+.tl-axis span { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--fg-3); font-family: var(--mono); top: 2px; }
+.tl-row { display: grid; grid-template-columns: 112px minmax(0,1fr); gap: 8px; align-items: center; padding: 3px 0; }
+.tl-row .lab { font-size: 11px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-row .track { background: linear-gradient(var(--line), var(--line)) center/100% 1px no-repeat; }
+.tl-dot { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--accent); }
+.tl-dot.past { background: var(--fg-3); opacity: .55; }
+.tl-now { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--bad); }
+.tl-now::before { content: attr(data-t); position: absolute; bottom: -16px; left: 4px; font-size: 10px; color: var(--bad); font-family: var(--mono); white-space: nowrap; }
+.tl-wrap { position: relative; }
+.tl-grid { display: grid; grid-template-columns: 112px minmax(0,1fr); gap: 8px; }
+
+/* agents table */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchip { border: 1px solid var(--line); background: var(--frame); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
+.fchip.on { border-color: var(--fg); background: var(--fg); color: var(--frame); }
+.group-h { font-size: 11px; font-weight: 600; color: var(--fg-2); text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 6px; display: flex; justify-content: space-between; }
+.group-h span { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--fg-3); }
+.rows { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 14px minmax(0,2.4fr) minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr); gap: 10px; align-items: center; width: 100%;
+  border: 0; border-top: 1px solid var(--line); background: none; text-align: left; padding: 9px 12px; font-size: 12px; }
+.row:first-child { border-top: 0; }
+.row:hover { background: var(--panel-2); }
+.row.on { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.row .nm { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .c2, .row .c3, .row .c4 { color: var(--fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); }
+.sd.ok { background: var(--ok); } .sd.bad { background: var(--bad); } .sd.warn { background: var(--warn); }
+.sd.off { background: transparent; border: 1.5px solid var(--fg-3); }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 500; background: var(--muted-soft); color: var(--fg-2); white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+
+/* sessions kanban */
+.kanban { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+.kcol { background: var(--panel-2); border-radius: 8px; padding: 8px; min-width: 0; }
+.kcol h3 { font-size: 11px; font-weight: 600; margin: 2px 4px 8px; display: flex; justify-content: space-between; color: var(--fg-2); }
+.kcard { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--frame); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; display: block; }
+.kcard:hover { border-color: var(--accent); }
+.kcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.kcard b { display: block; font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+.kcard span { display: block; font-size: 11px; color: var(--fg-2); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.kcard em { font-style: normal; font-size: 10px; color: var(--fg-3); font-family: var(--mono); display: block; margin-top: 5px; }
+.kempty { font-size: 11px; color: var(--fg-3); padding: 4px; }
+
+/* code + pages */
+.list { display: grid; gap: 6px; }
+.li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--frame); width: 100%; text-align: left; }
+.li:hover { border-color: var(--accent); }
+.li.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.li b { font-weight: 500; font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li span { font-size: 11px; color: var(--fg-3); }
+.pages { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
+
+/* ideas board */
+.ideas-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.swatch { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,.12); padding: 0; }
+.swatch.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.figjam { position: relative; height: 560px; overflow: auto; border-radius: 6px; border: 1px solid var(--line);
+  background-color: var(--panel-2); background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 16px 16px; }
+.figjam-inner { position: relative; width: 1600px; height: 1100px; }
+.figjam.tool-sticky { cursor: crosshair; }
+.sticky { position: absolute; width: 184px; min-height: 168px; padding: 12px 12px 30px; color: var(--sticky-ink);
+  box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 6px 12px rgba(0,0,0,.08); border-radius: 2px; touch-action: none; user-select: none; cursor: grab; }
+.sticky.dragging { cursor: grabbing; box-shadow: 0 6px 22px rgba(0,0,0,.22); z-index: 5; transform: rotate(-1deg); }
+.sticky.on { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sticky .tx { font-size: 14px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.4em; }
+.sticky .tx:empty::before { content: "Type your idea…"; opacity: .45; }
+.sticky textarea { width: 100%; min-height: 110px; border: 0; background: transparent; font: inherit; font-size: 14px; line-height: 1.35; color: inherit; resize: none; padding: 0; outline: none; }
+.sticky .meta { position: absolute; left: 12px; right: 10px; bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; opacity: .7; }
+.sticky .vote { border: 0; background: rgba(0,0,0,.08); border-radius: 999px; padding: 1px 7px; font-size: 11px; color: inherit; }
+.sticky .st { text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+.ideas-list { display: none; gap: 8px; }
+.ideas-list .il { display: grid; grid-template-columns: 6px minmax(0,1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px 8px 0; background: var(--frame); width: 100%; text-align: left; overflow: hidden; }
+.ideas-list .il i { align-self: stretch; }
+.ideas-list .il b { font-weight: 500; font-size: 13px; display: block; overflow-wrap: anywhere; }
+.ideas-list .il span { font-size: 11px; color: var(--fg-3); }
+.empty-board { position: absolute; left: 24px; top: 24px; max-width: 320px; color: var(--fg-2); font-size: 13px; line-height: 1.5; }
+.figjam-wrap[data-view="list"] .figjam { display: none; }
+.figjam-wrap[data-view="list"] .ideas-list { display: grid; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--frame); padding: 5px 10px; font-size: 12px; }
+.seg button.on { background: var(--fg); color: var(--frame); }
+.steps { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.45; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--chrome); color: var(--chrome-fg);
+  border-radius: 8px; padding: 9px 12px; font-size: 12px; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 50; max-width: calc(100% - 32px); }
+.toast button { background: none; border: 0; color: #59b8ff; font-weight: 600; }
+
+@media (max-width: 1180px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .board { grid-template-columns: minmax(0,1fr); }
+  .cols { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: minmax(0,1fr); }
+  .left { display: none; }
+  .left.open { display: block; position: fixed; z-index: 30; top: 44px; bottom: 0; left: 0; width: min(280px, 85vw); box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .right { position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; max-height: 58vh; border-left: 0; border-top: 1px solid var(--line);
+    border-radius: 12px 12px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.18); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .right[data-empty="true"] { display: none; }
+  .ins-close { display: inline-flex; }
+  .chips { display: flex; }
+  .app { grid-template-rows: 44px auto 1fr; }
+  .board { padding: 20px max(16px, env(safe-area-inset-right, 0px)) 140px max(16px, env(safe-area-inset-left, 0px)); gap: 40px; }
+  .frame { padding: 16px; }
+  .kanban { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .row { grid-template-columns: 14px minmax(0,1fr) auto; }
+  .row .c2, .row .c3 { display: none; }
+  .pages { grid-template-columns: minmax(0,1fr); }
+  .tb-hide-sm { display: none; }
+}
+@media (max-width: 520px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .kpi:last-child { grid-column: 1 / -1; }
+  .kanban { grid-template-columns: minmax(0,1fr); }
+  .figjam { height: 460px; }
+  .tl-row, .tl-grid { grid-template-columns: 76px minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="app">
+  <header class="toolbar">
+    <button class="tb-btn" id="layersBtn" aria-label="Layers" title="Layers">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2 2 5l6 3 6-3-6-3Z"/><path d="m2 8 6 3 6-3"/><path d="m2 11 6 3 6-3"/></svg>
+    </button>
+    <span class="tb-sep tb-hide-sm"></span>
+    <button class="tb-btn" data-tool="move" aria-pressed="true" title="Move (V)">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l9.5 5.2-4.2 1-2.1 4.3L3 2Z"/></svg>
+    </button>
+    <button class="tb-btn" data-tool="sticky" aria-pressed="false" title="Sticky note (S)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 2.5h11v7l-4 4h-7v-11Z"/><path d="M9.5 13.5v-4h4"/></svg>
+      <span class="tb-hide-sm">Sticky</span>
+    </button>
+    <div class="tb-title"><span>Keith /</span> <b>Work Hub</b></div>
+    <span class="live-pill" id="livePill" data-state="snapshot"><i></i><span id="liveText">Snapshot</span></span>
+    <button class="tb-btn" id="refreshBtn" title="Refresh live data">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5v3h-3"/></svg>
+      <span class="tb-hide-sm">Refresh</span>
+    </button>
+    <span class="tb-sep tb-hide-sm"></span>
+    <button class="tb-btn zoom tb-hide-sm" id="zoomBtn" title="Zoom">100%</button>
+  </header>
+
+  <nav class="chips" id="chips" aria-label="Frames"></nav>
+
+  <div class="workspace">
+    <aside class="panel left" id="left">
+      <div class="p-sec">
+        <p class="p-head">Pages</p>
+        <div id="pagesNav"></div>
+      </div>
+      <div class="p-sec">
+        <p class="p-head">Layers <span id="layerCount"></span></p>
+        <div id="layers"></div>
+      </div>
+    </aside>
+
+    <main class="canvas" id="canvas">
+      <div class="board" id="board">
+
+        <section class="fwrap wide" id="f-overview" data-frame="overview">
+          <button class="f-label" data-select-frame="overview"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>Overview</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h"><h2 id="greeting">Today across your work</h2><span class="src" id="ovSrc"></span></div>
+            <div class="kpis" id="kpis"></div>
+            <div class="cols">
+              <div><p class="sub-h">Needs attention</p><ul class="att" id="attention"></ul></div>
+              <div><p class="sub-h">Agent runs today <span class="note" style="display:inline">· Central time</span></p><div class="tl" id="timeline"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="fwrap wide" id="f-agents" data-frame="agents">
+          <button class="f-label" data-select-frame="agents"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>AI Agents</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h"><h2>Scheduled AI agents</h2><div class="filters" id="agentFilters"></div></div>
+            <div id="agentsErr"></div>
+            <div id="agents"></div>
+          </div>
+        </section>
+
+        <section class="fwrap wide" id="f-sessions" data-frame="sessions">
+          <button class="f-label" data-select-frame="sessions"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>Claude Sessions</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h"><h2>Claude Code sessions</h2><span class="src" id="sessSrc"></span></div>
+            <div id="sessErr"></div>
+            <div class="kanban" id="kanban"></div>
+          </div>
+        </section>
+
+        <section class="fwrap" id="f-code" data-frame="code">
+          <button class="f-label" data-select-frame="code"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>Code</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h"><h2>Repos &amp; pull requests</h2><span class="src">GitHub · as of Oct 29</span></div>
+            <p class="sub-h">dkeithayers1-dev/Tv-Lobby-</p>
+            <div class="list" id="prs"></div>
+            <p class="sub-h" style="margin-top:16px">Latest commits on main</p>
+            <div class="list" id="commits"></div>
+          </div>
+        </section>
+
+        <section class="fwrap" id="f-pages" data-frame="pages">
+          <button class="f-label" data-select-frame="pages"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>Published Pages</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h"><h2>Pages you've built</h2><span class="src">52 published · key ones</span></div>
+            <div class="pages" id="pagesList"></div>
+          </div>
+        </section>
+
+        <section class="fwrap wide" id="f-ideas" data-frame="ideas">
+          <button class="f-label" data-select-frame="ideas"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3.5 1v10M8.5 1v10M1 3.5h10M1 8.5h10"/></svg>Ideas</button>
+          <div class="frame">
+            <i class="handle h-tl"></i><i class="handle h-tr"></i><i class="handle h-bl"></i><i class="handle h-br"></i><span class="size-badge"></span>
+            <div class="f-h">
+              <h2>Ideas board</h2>
+              <div class="ideas-bar">
+                <div id="swatches" style="display:flex;gap:6px"></div>
+                <button class="btn primary" id="addIdea">+ Add sticky</button>
+                <div class="seg" id="viewSeg"><button data-view="board" class="on">Board</button><button data-view="list">List</button></div>
+              </div>
+            </div>
+            <div id="ideasErr"></div>
+            <div class="figjam-wrap" id="figjamWrap" data-view="board">
+              <div class="figjam" id="figjam"><div class="figjam-inner" id="figjamInner"></div></div>
+              <div class="ideas-list" id="ideasList"></div>
+            </div>
+            <p class="note" id="ideasNote">Drag stickies to arrange them. Double-tap to edit. With the Sticky tool (S), click anywhere on the board to drop one.</p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <aside class="panel right" id="right" data-empty="true" aria-label="Inspector"></aside>
+  </div>
+</div>
+<div id="toastHost"></div>
+
+<script>
+/* ---------- Snapshot of real data, captured Oct 29, 2026 ~8:25 AM CT. Live data replaces it when the Claude Code Remote connector answers. ---------- */
+const SNAPSHOT_AT = "2026-10-29T13:25:00Z";
+const SNAP_TRIGGERS = [
+  { id:"trig_01P4MohEdhrH9anTcXnnoatL", name:"Haul Good – Customer Service agent", cron:"CRON_TZ=America/Chicago 7 7-19 * * *", enabled:true, last:{s:"SUCCEEDED", at:"2026-10-29T12:13:34Z"}, next:"2026-10-29T13:07:00Z", what:"Processes owner closeout reports and new customer emails in the Haul Good Gmail label; drafts replies, logs jobs on the Job Board." },
+  { id:"trig_01A3RXWLBXnNpokqxDvc5XJu", name:"Daily Court Stand Up", cron:"CRON_TZ=America/Chicago 56 5 * * *", enabled:true, last:{s:"SUCCEEDED", at:"2026-10-29T10:59:03Z"}, next:"2026-10-30T10:56:00Z", what:"Updates The Daily Court Stand Up newspaper (census, labor, pendant, TELS, Today's Three, weather, activities) and emails it." },
+  { id:"trig_019JWMwMJiKENhSopTYonjRC", name:"TRR dashboard — Noon Google Drive import", cron:"CRON_TZ=America/Chicago 0 12 * * 1-5", enabled:true, last:{s:"SUCCEEDED", at:"2026-10-28T17:14:04Z"}, next:"2026-10-29T17:09:19Z", what:"Imports files dropped in the Year-End Dashboard Drive folder into the Command Center's data." },
+  { id:"trig_01NMouhHGYALzckTqD28JiaD", name:"TRR dashboard — 8 AM weekday census (Rent Roll) & revenue (Transaction Detail)", cron:"0 13,14 * * 1-5", enabled:false, updated:"2026-10-28T19:49:12Z", last:{s:"SUCCEEDED", at:"2026-10-28T14:22:15Z"}, what:"Reads the newest Rent Roll and Transaction Detail PDFs and updates census and revenue on the Command Center." },
+  { id:"trig_018EMFqUKFyRbt75jYtNXnQ1", name:"TRR Care Staff Assignment – change check", cron:"CRON_TZ=America/Chicago 52 4,12,16,20 * * *", enabled:false, updated:"2026-10-27T09:20:12Z", last:{s:"SUCCEEDED", at:"2026-10-27T01:53:05Z"}, what:"Sends an UPDATED care staff assignment when the Health Services schedule changes after one went out." },
+  { id:"trig_01MPiF5Q3Kh15VjL8KSj5qE8", name:"TRR Care Staff Assignment – 9 AM daily", cron:"CRON_TZ=America/Chicago 52 8 * * *", enabled:false, updated:"2026-10-27T09:20:21Z", last:{s:"SUCCEEDED", at:"2026-10-26T13:59:14Z"}, what:"Builds tomorrow's Care Staff Assignment PDF from the schedule and emails it to the wellness team." },
+  { id:"trig_01A3Chboihn3oHH7t8xXpGXz", name:"TRR dashboard — 8 AM & 4 PM Dayforce labor update", cron:"CRON_TZ=America/Chicago 0 8,16 * * *", enabled:false, last:{s:"SUCCEEDED", at:"2026-10-08T21:15:15Z"}, what:"Loads Dayforce department hours and OT risk into the Command Center." },
+  { id:"trig_01XEwJwTwupQ9fnwy5dJZht2", name:"TRR dashboard — Gmail tour scan (9 AM & 4 PM)", cron:"0 14,15,21,22 * * *", enabled:false, last:{s:"SUCCEEDED", at:"2026-10-07T15:07:15Z"}, what:"Scans Gmail for scheduled or completed tours and updates the sales pipeline." },
+  { id:"trig_01U6WzWEs5M4rYeE2WCaEYe3", name:"TRR Morning Action Items and Follow-Ups (7:30 AM)", cron:"CRON_TZ=America/Chicago 30 7 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-11T12:31:38Z", r:"USAGE_LIMIT_REACHED"}, what:"Closed-loop action item register: reads your replies, clears items, emails the morning list." },
+  { id:"trig_01KHHZ8pvKmJPMrnRF13Vgsx", name:"TRR Daily Executive Report (7:30 AM)", cron:"CRON_TZ=America/Chicago 30 7 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-10T17:33:14Z", r:"USAGE_LIMIT_REACHED"}, what:"20-section executive report (.docx) and live dashboard (.xlsx), plus over-hours emails." },
+  { id:"trig_01E66MAVkfNjX6kFMGc1xLRT", name:"TRR Financial Ops Daily Checklist", cron:"CRON_TZ=America/Chicago 30 9 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-10T17:33:40Z", r:"USAGE_LIMIT_REACHED"}, what:"Short financial checklist email from the newest Drive files." },
+  { id:"trig_01G9nVod8XBCrbYhWW9SK5rA", name:"TRR 7:00 AM Daily Executive Report", cron:"0 12 * * *", enabled:false, last:{s:"FAILED", at:"2026-09-25T11:35:52Z", r:"USAGE_LIMIT_REACHED"}, what:"Earlier version of the daily executive report." },
+  { id:"trig_01QyGcJXH8CwyEFnztyGGBpQ", name:"DayForce Hours", cron:"CRON_TZ=America/Chicago 0 10 * * 1-5", enabled:false, last:{s:"FAILED", at:"2026-09-26T10:34:03Z", r:"USAGE_LIMIT_REACHED"}, what:"Loads Dayforce hours to the report by 10 AM on weekdays." },
+  { id:"trig_018AQa9dJSdZ3q3jDj5MF2PN", name:"Haul Good – Quotes & Booking agent", cron:"CRON_TZ=America/Chicago 22 8-18/2 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-10T17:22:33Z", r:"USAGE_LIMIT_REACHED"}, what:"Builds quotes from the Pricing tab, offers pickup windows, books calendar holds." },
+  { id:"trig_01UxsDbWLwkkrji1Cvn53yd1", name:"Haul Good – Crew Confirm & Dispatch agent", cron:"CRON_TZ=America/Chicago 52 6-8,16-20 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-10T13:52:30Z", r:"USAGE_LIMIT_REACHED"}, what:"Gets crew to confirm each pickup and sends morning routes." },
+  { id:"trig_018ekoZJ5iWNRyGrAaHWkALf", name:"Haul Good – Review Follow-up agent", cron:"CRON_TZ=America/Chicago 52 9 * * *", enabled:false, last:{s:"FAILED", at:"2026-10-10T14:52:38Z", r:"USAGE_LIMIT_REACHED"}, what:"Drafts Google review requests after completed jobs." },
+  { id:"trig_01P7TSVKyEsjsd9qpbn8Yih1", name:"Haul Good – Pickup Coordinator agent", cron:"CRON_TZ=America/Chicago 26 6,17 * * *", enabled:false, last:null, what:"Morning day sheet and evening day-before reminders for pickups." },
+  { id:"trig_016dYrJMw7mzuYVtredgWaSi", name:"Haul Good – Billing & Income agent", cron:"CRON_TZ=America/Chicago 48 18 * * *", enabled:false, last:null, what:"Records payments, drafts invoices, Monday money summary." },
+];
+const SNAP_SESSIONS = [
+  { id:"session_01NrvUWdo4KVTxbhUA7F6CZH", title:"Interactive work dashboard", bucket:"WORKING", updated:"2026-10-29T13:22:06Z", summary:"Building this Work Hub." },
+  { id:"session_018L8nX5pXDHngXcGN8wQoSw", title:"Haul Good quotes and booking agent", bucket:"COMPLETED", updated:"2026-10-26T19:44:59Z", summary:"All six Haul Good agents now send their emails to quote@haulgoodjunkremoval.com; Customer Service is the only one running." },
+  { id:"session_01BDcNXuq8XXMbuTTs7AxrNy", title:"Employee schedule with messaging", bucket:"COMPLETED", updated:"2026-10-24T03:19:38Z", summary:"Registering is free to start with a trial credit; ongoing cost is about $4–5 a month for texting 35 employees." },
+  { id:"session_01MmYbSKxnrD2RehrtSSK6Aq", title:"Instructions", bucket:"COMPLETED", updated:"2026-10-18T12:04:25Z", summary:"Report with active and paused scheduled tasks, agent/plan/usage block for Archer." },
+  { id:"session_011xv7jR77efRmLfgpnoEaj4", title:"Error correction", bucket:"COMPLETED", updated:"2026-10-18T10:39:07Z", summary:"Added prospect assignment and 30-min auto sign-out to the team version; tested against a Postgres stand-in, not live Supabase." },
+  { id:"session_01V51otxzwRfr9Y9TA2k3gPV", title:"New session", bucket:"COMPLETED", updated:"2026-10-14T04:15:47Z", summary:"Revised One-Person_Company_OS HTML: layout, mobile, a11y, and YAML quoting fixes; not committed to any repo." },
+  { id:"session_01Fq2MCSsM4Kz4UFR6EjnD1k", title:"Desktop setup alternative", bucket:"COMPLETED", updated:"2026-10-14T04:00:46Z", summary:"Condensed home-server setup guide: Linux user separation, approval queue, GitHub Project board, token-saving tips." },
+  { id:"session_017xYgaeZnC8HVFqdvDvZtJ4", title:"AI projects monitoring tool", bucket:"FAILED", updated:"2026-10-10T19:30:52Z", summary:"Last turn ended with an error." },
+  { id:"session_01Ep2NfbiBGVKQRRBZUgSig9", title:"AI usage monitor", bucket:"COMPLETED", updated:"2026-10-01T02:32:21Z", summary:"/usage page: daily/monthly/all-time costs, 30-day chart, breakdown by model/project, budget alerts." },
+  { id:"session_01SSipH6eXehPBsVTUH7RYwJ", title:"Receipt scanning expense report app", bucket:"BLOCKED", updated:"2026-09-18T14:05:36Z", summary:"Waiting on you: use the file above, or upload to Drive and email a link instead?" },
+];
+const PRS = [
+  { n:3, title:"Add monthly employee shift schedule with Twilio texting", created:"2026-10-24T05:13:08Z", url:"https://github.com/dkeithayers1-dev/Tv-Lobby-/pull/3" },
+  { n:2, title:"Add Best Fit placement CRM with server auth and encrypted backups", created:"2026-10-22T12:49:40Z", url:"https://github.com/dkeithayers1-dev/Tv-Lobby-/pull/2" },
+  { n:1, title:"Add Claude Code usage monitor page and budget alerts", created:"2026-10-01T02:56:15Z", url:"https://github.com/dkeithayers1-dev/Tv-Lobby-/pull/1" },
+];
+const COMMITS = [
+  { sha:"387bee1", msg:"Document spam/quarantine caveat for corporate recipients", at:"2026-09-18T13:53:04Z" },
+  { sha:"2ac6a4d", msg:"Prefill default report recipients in .env.example", at:"2026-09-18T13:40:03Z" },
+  { sha:"68b1417", msg:"Add receipt-to-expense-report app with auto-email", at:"2026-09-18T13:38:40Z" },
+];
+const PAGES = [
+  { t:"TRR Year-End Command Center", u:"https://claude.ai/artifact/MM6X4bTXYKb5Uf3eneZ7d7", d:"2026-10-02", tag:"Pinned" },
+  { t:"The Daily Court Stand Up", u:"https://claude.ai/artifact/2RvdcZuhxPPTUNpKaYV2Ng", d:"2026-10-29", tag:"Agent-updated" },
+  { t:"Haul Good Dispatch", u:"https://claude.ai/artifact/LWKRTPqBZSmkqF6yPF3trx", d:"2026-10-25" },
+  { t:"Scheduled Task Board", u:"https://claude.ai/artifact/9jvgKA9izrJFNt8FWDe8qz", d:"2026-10-18" },
+  { t:"Best Fit CRM Studio", u:"https://claude.ai/artifact/SMA8QZ6Tu5aSPzFgyAjE8B", d:"2026-10-18" },
+  { t:"Workflow Bench", u:"https://claude.ai/artifact/531auhkd2emN5HcE5a4nPe", d:"2026-10-17" },
+  { t:"Together Senior Advisors — 5-Year Business Plan", u:"https://claude.ai/artifact/RduSYfV9DvDpKQLscMQXmX", d:"2026-10-28" },
+  { t:"Senior Living Community Referral Agreement", u:"https://claude.ai/artifact/Pk9CF78yyk4nvdXiucazec", d:"2026-10-28" },
+  { t:"TRR Fall Detection Pilot Plan", u:"https://claude.ai/artifact/4vTKhCiPTMkoUcBTsP32LZ", d:"2026-10-25" },
+  { t:"TRR 2027 Budget Proposal", u:"https://claude.ai/artifact/DpAMwvqWvpEM8prZYfjQrn", d:"2026-10-12" },
+];
+
+/* ---------- state ---------- */
+const S = {
+  triggers: SNAP_TRIGGERS.map(t => ({...t})),
+  sessions: SNAP_SESSIONS.map(s => ({...s})),
+  trigAsOf: SNAPSHOT_AT, sessAsOf: SNAPSHOT_AT, live: false,
+  agentFilter: "all",
+  sel: null,            // {type, id}
+  ideas: [], ideasReady: false,
+  tool: "move", color: "yellow", zoom: 1,
+  confirm: null, busy: false,
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TZ = "America/Chicago";
+const COLORS = ["yellow","green","blue","pink","purple","orange"];
+
+/* ---------- time helpers ---------- */
+function chiParts(d) {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour12: false, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", weekday:"short" }).formatToParts(d);
+  const o = {}; p.forEach(x => o[x.type] = x.value);
+  const wd = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday);
+  return { y:+o.year, mo:+o.month, d:+o.day, h:(+o.hour)%24, mi:+o.minute, wd };
+}
+function chiOffsetHours(d = new Date()) { // hours behind UTC
+  const p = chiParts(d); return ((d.getUTCHours() - p.h) + 24) % 24;
+}
+function fmtTime(iso) {
+  if (!iso) return "—";
+  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }).format(new Date(iso));
+}
+function ago(iso) {
+  if (!iso) return "never";
+  const ms = Date.now() - new Date(iso).getTime(), a = Math.abs(ms), fut = ms < 0;
+  const m = Math.round(a/60000), h = Math.round(a/3600000), d = Math.round(a/86400000);
+  const s = m < 1 ? "now" : m < 60 ? m + "m" : h < 36 ? h + "h" : d + "d";
+  return s === "now" ? "just now" : fut ? "in " + s : s + " ago";
+}
+const hm = (h, m) => { const ap = h < 12 ? "AM" : "PM"; const hh = h % 12 || 12; return m ? `${hh}:${String(m).padStart(2,"0")} ${ap}` : `${hh} ${ap}`; };
+const hShort = h => (h % 12 || 12) + (h < 12 ? "a" : "p");
+
+/* ---------- cron ---------- */
+function parseField(f, min, max) {
+  const out = new Set();
+  for (const part of f.split(",")) {
+    let [range, step] = part.split("/"); step = +step || 1;
+    let a, b;
+    if (range === "*") { a = min; b = max; }
+    else if (range.includes("-")) { [a, b] = range.split("-").map(Number); }
+    else { a = +range; b = step > 1 ? max : a; }
+    for (let v = a; v <= b; v += step) out.add(v === 7 && max === 6 ? 0 : v);
+  }
+  return [...out].sort((x, y) => x - y);
+}
+function parseCron(c) {
+  let tz = "UTC", rest = c.trim();
+  const m = rest.match(/^CRON_TZ=(\S+)\s+(.*)$/); if (m) { tz = m[1]; rest = m[2]; }
+  const [mi, h, , , dw] = rest.split(/\s+/);
+  return { tz, mins: parseField(mi,0,59), hrs: parseField(h,0,23), dows: parseField(dw,0,6), dowRaw: dw };
+}
+function chiHours(p) { // cron hours expressed in Central time
+  if (p.tz === TZ) return p.hrs;
+  const off = chiOffsetHours();
+  return p.hrs.map(h => (h - off + 24) % 24).sort((a,b)=>a-b);
+}
+function humanCron(c) {
+  const p = parseCron(c), hrs = chiHours(p), mm = p.mins[0];
+  const days = p.dowRaw === "*" ? "Daily" : p.dowRaw === "1-5" ? "Weekdays" : p.dows.map(d => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d]).join(", ");
+  let times;
+  const step = hrs.length > 2 ? hrs[1] - hrs[0] : 0;
+  const even = step > 0 && hrs.every((h, i) => i === 0 || h - hrs[i-1] === step);
+  if (hrs.length >= 5 && even) times = `${step === 1 ? "hourly" : "every " + step + "h"} ${hShort(hrs[0])}–${hShort(hrs[hrs.length-1])} at :${String(mm).padStart(2,"0")}`;
+  else if (hrs.length > 3) times = `${hrs.length}× at :${String(mm).padStart(2,"0")} (${hrs.map(hShort).join(", ")})`;
+  else times = hrs.map(h => hm(h, mm)).join(" & ");
+  return `${days} ${times}`;
+}
+function firesOn(c, wd) { // minutes-of-day (Central) on a weekday
+  const p = parseCron(c);
+  if (!p.dows.includes(wd)) return [];
+  const out = []; chiHours(p).forEach(h => p.mins.forEach(m => out.push(h*60 + m)));
+  return out.sort((a,b)=>a-b);
+}
+const firesToday = c => firesOn(c, chiParts(new Date()).wd);
+function nextFire(c) { // label for the next scheduled run, from the cron itself
+  const now = chiParts(new Date()), nowM = now.h*60 + now.mi;
+  for (let k = 0; k < 8; k++) {
+    const wd = (now.wd + k) % 7, m = firesOn(c, wd).find(x => k > 0 || x > nowM);
+    if (m != null) {
+      const day = k === 0 ? "Today" : k === 1 ? "Tomorrow" : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][wd];
+      const mins = k * 1440 + m - nowM;
+      return { label: `${day} ${hm(Math.floor(m/60), m%60)}`, rel: mins < 60 ? `in ${mins}m` : `in ${Math.round(mins/60)}h` };
+    }
+  }
+  return null;
+}
+
+/* ---------- derived ---------- */
+function group(name) {
+  if (/^haul good/i.test(name)) return "Haul Good Junk Removal";
+  if (/dashboard/i.test(name)) return "TRR Command Center data feeds";
+  return "The Court at Round Rock";
+}
+const REASONS = { USAGE_LIMIT_REACHED: "Usage limit reached" };
+function agentState(t) {
+  const failed = t.last && t.last.s === "FAILED";
+  if (t.enabled) return failed ? { k:"warn", label:"Running · last run failed" } : { k:"ok", label:"Running" };
+  if (!t.last) return { k:"off", label:"Paused · never ran" };
+  return failed ? { k:"bad", label:"Paused · last run failed" } : { k:"off", label:"Paused" };
+}
+function lastChip(t) {
+  if (!t.last) return `<span class="chip">Never ran</span>`;
+  return t.last.s === "FAILED" ? `<span class="chip bad">Failed ${ago(t.last.at)}</span>` : `<span class="chip ok">OK ${ago(t.last.at)}</span>`;
+}
+const BUCKETS = [
+  { k:"BLOCKED", label:"Needs you" }, { k:"WORKING", label:"Working" },
+  { k:"FAILED", label:"Failed" }, { k:"COMPLETED", label:"Done" },
+];
+
+/* ---------- render: nav ---------- */
+const FRAMES = [
+  { id:"overview", name:"Overview" }, { id:"agents", name:"AI Agents" }, { id:"sessions", name:"Claude Sessions" },
+  { id:"code", name:"Code" }, { id:"pages", name:"Published Pages" }, { id:"ideas", name:"Ideas" },
+];
+function renderNav() {
+  const counts = { agents: S.triggers.length, sessions: S.sessions.length, code: PRS.length, pages: PAGES.length, ideas: S.ideas.length };
+  $("#pagesNav").innerHTML = `<button class="layer on"><span class="ic">▸</span><span class="nm">Work Hub</span></button>`;
+  let html = "";
+  for (const f of FRAMES) {
+    const on = S.sel && S.sel.type === "frame" && S.sel.id === f.id;
+    html += `<button class="layer ${on ? "on" : ""}" data-select-frame="${f.id}"><span class="ic">#</span><span class="nm">${f.name}</span><span class="ct">${counts[f.id] ?? ""}</span></button>`;
+    if (f.id === "agents") S.triggers.filter(t => t.enabled).forEach(t => {
+      const on2 = S.sel && S.sel.type === "agent" && S.sel.id === t.id;
+      html += `<button class="layer child ${on2 ? "on" : ""}" data-agent="${t.id}"><span class="ic" style="color:var(--ok)">●</span><span class="nm">${esc(t.name)}</span></button>`;
+    });
+    if (f.id === "sessions") S.sessions.filter(s => s.bucket === "BLOCKED" || s.bucket === "WORKING").forEach(s => {
+      html += `<button class="layer child" data-session="${s.id}"><span class="ic">◆</span><span class="nm">${esc(s.title)}</span></button>`;
+    });
+  }
+  $("#layers").innerHTML = html;
+  $("#layerCount").textContent = FRAMES.length + " frames";
+  $("#chips").innerHTML = FRAMES.map(f => `<button data-jump="${f.id}">${f.name}</button>`).join("");
+}
+
+/* ---------- render: overview ---------- */
+function renderOverview() {
+  const p = chiParts(new Date());
+  const part = p.h < 12 ? "Good morning" : p.h < 17 ? "Good afternoon" : "Good evening";
+  $("#greeting").textContent = `${part}, Keith`;
+  const running = S.triggers.filter(t => t.enabled);
+  const failedLast = S.triggers.filter(t => t.last && t.last.s === "FAILED");
+  const needYou = S.sessions.filter(s => s.bucket === "BLOCKED");
+  const working = S.sessions.filter(s => s.bucket === "WORKING");
+  const nextRuns = running.map(t => ({ t, mins: firesToday(t.cron).filter(m => m > p.h*60 + p.mi) })).filter(x => x.mins.length);
+  const nextUp = nextRuns.sort((a,b) => a.mins[0] - b.mins[0])[0];
+  $("#kpis").innerHTML = [
+    { k:"Agents running", v:`${running.length}<small> / ${S.triggers.length}</small>`, d: nextUp ? `Next: ${hm(Math.floor(nextUp.mins[0]/60), nextUp.mins[0]%60)}` : "No more runs today", go:"agents" },
+    { k:"Last run failed", v: failedLast.length, d:`${failedLast.filter(t => t.last.r === "USAGE_LIMIT_REACHED").length} hit the usage limit`, go:"agents" },
+    { k:"Sessions", v:`${working.length}<small> working</small>`, d:`${needYou.length} waiting on you`, go:"sessions" },
+    { k:"Open PRs", v: PRS.length, d:`Oldest ${ago(PRS[PRS.length-1].created).replace(" ago","")} old`, go:"code" },
+    { k:"Ideas", v: S.ideasReady ? S.ideas.length : "–", d: S.ideasReady ? `${S.ideas.filter(i => i.status === "doing").length} in progress` : "Loading board", go:"ideas" },
+  ].map(x => `<button class="kpi" data-jump="${x.go}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></button>`).join("");
+
+  const att = [];
+  needYou.forEach(s => att.push({ sev:"bad", t:`${s.title} is waiting on your answer`, d:s.summary, sel:{type:"session", id:s.id} }));
+  S.sessions.filter(s => s.bucket === "FAILED").forEach(s => att.push({ sev:"warn", t:`Session "${s.title}" ended with an error`, d:`Updated ${ago(s.updated)}`, sel:{type:"session", id:s.id} }));
+  running.filter(t => t.last && t.last.s === "FAILED").forEach(t => att.push({ sev:"bad", t:`${t.name} failed its last run`, d: REASONS[t.last.r] || t.last.r || "", sel:{type:"agent", id:t.id} }));
+  const recentPause = S.triggers.filter(t => !t.enabled && t.updated && Date.now() - new Date(t.updated) < 3*864e5);
+  recentPause.forEach(t => att.push({ sev:"info", t:`${t.name.replace(/^TRR dashboard — /, "Command Center feed: ").replace(/ \(.*$/, "")} was paused ${ago(t.updated)}`, d:"Turn it back on from its inspector if that wasn't intended", sel:{type:"agent", id:t.id} }));
+  const usage = S.triggers.filter(t => !t.enabled && t.last && t.last.r === "USAGE_LIMIT_REACHED");
+  if (usage.length) att.push({ sev:"warn", t:`${usage.length} paused agents last stopped on the usage limit`, d:"They never finished their last run", jump:"agents", filter:"failed" });
+  att.push({ sev:"info", t:`${PRS.length} pull requests open on Tv-Lobby-`, d:`Oldest opened ${fmtTime(PRS[PRS.length-1].created)}`, jump:"code" });
+  $("#attention").innerHTML = att.map((a, i) => `<li data-sev="${a.sev}"><i></i><button data-att="${i}"><b>${esc(a.t)}</b><span>${esc(a.d)}</span></button></li>`).join("");
+  $("#attention").onclick = e => {
+    const b = e.target.closest("[data-att]"); if (!b) return; const a = att[+b.dataset.att];
+    if (a.sel) { select(a.sel); scrollToEl(itemEl(a.sel)); }
+    else { if (a.filter) { S.agentFilter = a.filter; renderAgents(); } jump(a.jump); }
+  };
+  $("#ovSrc").textContent = S.live ? `Live · agents ${ago(S.trigAsOf)}` : `Snapshot · ${fmtTime(SNAPSHOT_AT)}`;
+  renderTimeline(running, p);
+}
+function renderTimeline(running, p) {
+  const nowM = p.h*60 + p.mi, pct = m => (m / 1440 * 100).toFixed(2) + "%";
+  const axis = [0,3,6,9,12,15,18,21].map(h => `<span style="left:${pct(h*60)}">${hShort(h)}</span>`).join("");
+  const rows = running.map(t => {
+    const dots = firesToday(t.cron).map(m => `<i class="tl-dot ${m <= nowM ? "past" : ""}" style="left:${pct(m)}" title="${hm(Math.floor(m/60), m%60)}"></i>`).join("");
+    return `<div class="tl-row"><button class="lab" data-agent="${t.id}" style="border:0;background:none;padding:0;text-align:left" title="${esc(t.name)}">${esc(t.name.replace(/^Haul Good – /,"HG · ").replace(/^TRR dashboard — /,"Feed · "))}</button><div class="track">${dots}</div></div>`;
+  }).join("") || `<p class="note">No agents are running right now.</p>`;
+  $("#timeline").innerHTML = `<div class="tl-wrap"><div class="tl-grid"><span></span><div class="tl-axis">${axis}</div></div>${rows}
+    <div class="tl-grid" style="position:absolute;inset:0;pointer-events:none"><span></span><div style="position:relative"><i class="tl-now" style="left:${pct(nowM)}" data-t="${hm(p.h, p.mi)}"></i></div></div></div>
+    <p class="note" style="margin-top:14px">${running.reduce((n,t) => n + firesToday(t.cron).length, 0)} runs scheduled today · ${running.reduce((n,t) => n + firesToday(t.cron).filter(m => m > nowM).length, 0)} still to go</p>`;
+}
+
+/* ---------- render: agents ---------- */
+function renderAgents() {
+  const F = [["all","All"],["running","Running"],["paused","Paused"],["failed","Last run failed"]];
+  const n = { all:S.triggers.length, running:S.triggers.filter(t=>t.enabled).length, paused:S.triggers.filter(t=>!t.enabled).length, failed:S.triggers.filter(t=>t.last && t.last.s==="FAILED").length };
+  $("#agentFilters").innerHTML = F.map(([k,l]) => `<button class="fchip ${S.agentFilter===k?"on":""}" data-filter="${k}">${l} <span class="mono">${n[k]}</span></button>`).join("");
+  const list = S.triggers.filter(t => S.agentFilter === "all" || (S.agentFilter === "running" && t.enabled) || (S.agentFilter === "paused" && !t.enabled) || (S.agentFilter === "failed" && t.last && t.last.s === "FAILED"));
+  const groups = {};
+  list.forEach(t => (groups[group(t.name)] ||= []).push(t));
+  const order = ["The Court at Round Rock","TRR Command Center data feeds","Haul Good Junk Removal"];
+  $("#agents").innerHTML = order.filter(g => groups[g]).map(g => {
+    const ts = groups[g].sort((a,b) => (b.enabled - a.enabled) || ((b.last?.at||"") > (a.last?.at||"") ? 1 : -1));
+    return `<div class="group-h">${g}<span>${ts.filter(t=>t.enabled).length} running of ${ts.length}</span></div><div class="rows">${ts.map(t => {
+      const st = agentState(t), on = S.sel && S.sel.type==="agent" && S.sel.id===t.id;
+      const nf = t.enabled && nextFire(t.cron);
+      return `<button class="row ${on?"on":""}" data-agent="${t.id}"><i class="sd ${st.k}" title="${st.label}"></i><span class="nm">${esc(t.name)}</span><span class="c2">${esc(humanCron(t.cron))}</span><span class="c3">${nf ? "Next " + esc(nf.label) : st.label}</span><span class="c4">${lastChip(t)}</span></button>`;
+    }).join("")}</div>`;
+  }).join("") || `<p class="note">No agents match this filter.</p>`;
+}
+
+/* ---------- render: sessions ---------- */
+function renderSessions() {
+  $("#sessSrc").textContent = S.live ? `Live · ${ago(S.sessAsOf)}` : `Snapshot · ${fmtTime(SNAPSHOT_AT)}`;
+  $("#kanban").innerHTML = BUCKETS.map(b => {
+    const cards = S.sessions.filter(s => s.bucket === b.k);
+    return `<div class="kcol"><h3>${b.label}<span class="mono">${cards.length}</span></h3>${cards.map(s => {
+      const on = S.sel && S.sel.type==="session" && S.sel.id===s.id;
+      return `<button class="kcard ${on?"on":""}" data-session="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.summary || "")}</span><em>${ago(s.updated)}</em></button>`;
+    }).join("") || `<div class="kempty">None</div>`}</div>`;
+  }).join("");
+}
+
+/* ---------- render: code + pages ---------- */
+function renderCode() {
+  $("#prs").innerHTML = PRS.map(p => { const on = S.sel && S.sel.type==="pr" && S.sel.id===p.n;
+    return `<button class="li ${on?"on":""}" data-pr="${p.n}"><div style="min-width:0"><b>#${p.n} ${esc(p.title)}</b><span>Opened ${ago(p.created)}</span></div><span class="chip info">Open</span></button>`; }).join("");
+  $("#commits").innerHTML = COMMITS.map(c => `<div class="li"><div style="min-width:0"><b>${esc(c.msg)}</b><span class="mono">${c.sha}</span> <span>· ${ago(c.at)}</span></div></div>`).join("");
+  $("#pagesList").innerHTML = PAGES.map(p => `<a class="li" href="${p.u}" target="_blank" rel="noopener"><div style="min-width:0"><b>${esc(p.t)}</b><span>Updated ${new Date(p.d+"T12:00:00Z").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span></div>${p.tag ? `<span class="chip">${p.tag}</span>` : `<span style="color:var(--fg-3)">↗</span>`}</a>`).join("");
+}
+
+/* ---------- render: ideas ---------- */
+const STATUS = { new:"New", exploring:"Exploring", doing:"Doing", parked:"Parked" };
+function renderIdeas() {
+  $("#swatches").innerHTML = COLORS.map(c => `<button class="swatch ${S.color===c?"on":""}" data-color="${c}" style="background:var(--s-${c})" aria-label="${c} sticky"></button>`).join("");
+  const inner = $("#figjamInner");
+  if (!S.ideasReady) { inner.innerHTML = `<div class="empty-board">Loading your ideas…</div>`; return; }
+  if (!S.ideas.length) inner.innerHTML = `<div class="empty-board"><b>No ideas yet.</b><br>Tap <b>+ Add sticky</b> or press <b>S</b> and click the board. Ideas save automatically and stay here between visits.</div>`;
+  else {
+    const existing = new Map([...inner.querySelectorAll(".sticky")].map(el => [el.dataset.idea, el]));
+    inner.querySelectorAll(".empty-board").forEach(e => e.remove());
+    S.ideas.forEach(i => {
+      let el = existing.get(i.id); existing.delete(i.id);
+      if (!el) { el = document.createElement("div"); el.className = "sticky"; el.dataset.idea = i.id; el.innerHTML = `<div class="tx"></div><div class="meta"><span class="st"></span><button class="vote" data-vote="${i.id}" aria-label="Upvote">▲ <span></span></button></div>`; inner.appendChild(el); }
+      if (el.classList.contains("dragging") || el.querySelector("textarea")) return;
+      el.style.left = (i.x ?? 40) + "px"; el.style.top = (i.y ?? 40) + "px";
+      el.style.background = `var(--s-${i.color || "yellow"})`;
+      el.querySelector(".tx").textContent = i.text || "";
+      el.querySelector(".st").textContent = STATUS[i.status] || "New";
+      el.querySelector(".vote span").textContent = i.votes || 0;
+      el.classList.toggle("on", !!(S.sel && S.sel.type === "idea" && S.sel.id === i.id));
+    });
+    existing.forEach(el => el.remove());
+  }
+  const sorted = [...S.ideas].sort((a,b) => (b.votes||0) - (a.votes||0));
+  $("#ideasList").innerHTML = sorted.map(i => `<button class="il" data-idea-pick="${i.id}"><i style="background:var(--s-${i.color||"yellow"})"></i><div style="min-width:0"><b>${esc(i.text || "Untitled idea")}</b><span>${STATUS[i.status]||"New"} · ▲ ${i.votes||0}</span></div><span class="chip">${STATUS[i.status]||"New"}</span></button>`).join("") || `<p class="note">No ideas yet. Tap + Add sticky.</p>`;
+}
+
+/* ---------- inspector ---------- */
+function renderInspector() {
+  const R = $("#right"), sel = S.sel;
+  const closeBtn = `<button class="btn ins-close" data-close-ins aria-label="Close">✕</button>`;
+  let html = "";
+  if (!sel || sel.type === "frame") {
+    const f = sel ? FRAMES.find(x => x.id === sel.id) : null;
+    const el = f ? document.getElementById("f-" + f.id).querySelector(".frame") : null;
+    html = `<div class="p-sec"><div style="display:flex;justify-content:space-between;gap:8px"><div><p class="ins-title">${f ? f.name : "Work Hub"}</p><p class="ins-sub">${f ? "Frame" : "Everything you have running, in one file"}</p></div>${f ? closeBtn : ""}</div></div>
+      ${el ? `<div class="p-sec"><p class="p-head">Frame</p><dl class="prop"><dt>W</dt><dd class="mono">${Math.round(el.offsetWidth)}</dd><dt>H</dt><dd class="mono">${Math.round(el.offsetHeight)}</dd></dl></div>` : ""}
+      <div class="p-sec"><p class="p-head">Data</p><dl class="prop">
+        <dt>Agents</dt><dd>${S.live ? "Live, " + ago(S.trigAsOf) : "Snapshot " + fmtTime(SNAPSHOT_AT)}</dd>
+        <dt>Sessions</dt><dd>${S.live ? "Live, " + ago(S.sessAsOf) : "Snapshot " + fmtTime(SNAPSHOT_AT)}</dd>
+        <dt>Code</dt><dd>Snapshot ${fmtTime(SNAPSHOT_AT)}</dd>
+        <dt>Ideas</dt><dd>${S.ideasReady ? "Saved board" : "Not connected"}</dd></dl>
+        <p class="note">Agents and sessions refresh live from your Claude Code Remote connector. Select any agent, session, PR or sticky to inspect it here.</p></div>`;
+  } else if (sel.type === "agent") {
+    const t = S.triggers.find(x => x.id === sel.id); if (!t) { S.sel = null; return renderInspector(); }
+    const st = agentState(t), firing = firesToday(t.cron);
+    html = `<div class="p-sec"><div style="display:flex;justify-content:space-between;gap:8px"><div style="min-width:0"><p class="ins-title">${esc(t.name)}</p><p class="ins-sub">${group(t.name)}</p></div>${closeBtn}</div>
+      <div style="margin-top:8px"><span class="chip ${st.k === "off" ? "" : st.k}">${st.label}</span></div></div>
+      <div class="p-sec"><p class="p-head">Schedule</p><dl class="prop">
+        <dt>When</dt><dd>${esc(humanCron(t.cron))}</dd>
+        <dt>Cron</dt><dd class="mono" style="font-size:11px">${esc(t.cron)}</dd>
+        <dt>Today</dt><dd>${firing.length ? firing.length + " run" + (firing.length>1?"s":"") : "No runs today"}</dd>
+        ${t.enabled && nextFire(t.cron) ? `<dt>Next run</dt><dd>${nextFire(t.cron).label} <span style="color:var(--fg-3)">(${nextFire(t.cron).rel})</span></dd>` : ""}
+      </dl></div>
+      <div class="p-sec"><p class="p-head">Last run</p><dl class="prop">
+        <dt>Result</dt><dd>${t.last ? (t.last.s === "FAILED" ? `<span style="color:var(--bad)">Failed</span>` : `<span style="color:var(--ok)">Succeeded</span>`) : "Never ran"}</dd>
+        ${t.last ? `<dt>When</dt><dd>${fmtTime(t.last.at)} (${ago(t.last.at)})</dd>` : ""}
+        ${t.last && t.last.r ? `<dt>Reason</dt><dd>${esc(REASONS[t.last.r] || t.last.r)}</dd>` : ""}
+        ${t.connectors ? `<dt>Uses</dt><dd>${esc(t.connectors.join(", "))}</dd>` : ""}
+      </dl></div>
+      <div class="p-sec"><p class="p-head">What it does</p><p class="prompt-prev">${esc(t.what || "")}</p></div>
+      <div class="p-sec"><p class="p-head">Actions</p>
+        <div class="ins-actions">
+          <button class="btn ${t.enabled ? "" : "primary"}" data-act="toggle" ${S.busy || !S.live ? "disabled" : ""}>${t.enabled ? "Pause agent" : "Turn on agent"}</button>
+          <button class="btn" data-act="run" ${S.busy || !S.live ? "disabled" : ""}>Run now</button>
+        </div>
+        ${S.confirm && S.confirm.id === t.id ? `<div class="confirm"><p>${S.confirm.kind === "run"
+          ? `Run <b>${esc(t.name)}</b> now? It does its full job, including any emails it sends.`
+          : t.enabled ? `Pause <b>${esc(t.name)}</b>? It stops running until you turn it back on.` : `Turn on <b>${esc(t.name)}</b>? It starts running on its schedule (${esc(humanCron(t.cron))}).`}</p>
+          <div class="ins-actions"><button class="btn primary" data-act="confirm">${S.confirm.kind === "run" ? "Run it" : t.enabled ? "Pause" : "Turn on"}</button><button class="btn" data-act="cancel">Cancel</button></div></div>` : ""}
+        <p class="note" id="actMsg">${S.live ? "" : "Actions turn on once live data loads from Claude Code Remote."}</p>
+      </div>`;
+  } else if (sel.type === "session") {
+    const s = S.sessions.find(x => x.id === sel.id); if (!s) { S.sel = null; return renderInspector(); }
+    const b = BUCKETS.find(x => x.k === s.bucket);
+    html = `<div class="p-sec"><div style="display:flex;justify-content:space-between;gap:8px"><div style="min-width:0"><p class="ins-title">${esc(s.title)}</p><p class="ins-sub">Claude Code session</p></div>${closeBtn}</div>
+      <div style="margin-top:8px"><span class="chip ${s.bucket==="BLOCKED"?"bad":s.bucket==="WORKING"?"info":s.bucket==="FAILED"?"warn":"ok"}">${b ? b.label : s.bucket}</span></div></div>
+      <div class="p-sec"><p class="p-head">Latest</p><p style="margin:0;font-size:12px;line-height:1.5">${esc(s.summary || "No summary")}</p></div>
+      <div class="p-sec"><dl class="prop"><dt>Updated</dt><dd>${fmtTime(s.updated)} (${ago(s.updated)})</dd><dt>ID</dt><dd class="mono" style="font-size:11px">${esc(s.id)}</dd></dl></div>
+      <div class="p-sec"><a class="btn primary" href="https://claude.ai/code/${encodeURIComponent(s.id)}" target="_blank" rel="noopener">Open session ↗</a></div>`;
+  } else if (sel.type === "pr") {
+    const p = PRS.find(x => x.n === sel.id);
+    html = `<div class="p-sec"><div style="display:flex;justify-content:space-between;gap:8px"><div style="min-width:0"><p class="ins-title">#${p.n} ${esc(p.title)}</p><p class="ins-sub">Pull request · Tv-Lobby-</p></div>${closeBtn}</div></div>
+      <div class="p-sec"><dl class="prop"><dt>State</dt><dd>Open, not merged</dd><dt>Opened</dt><dd>${fmtTime(p.created)} (${ago(p.created)})</dd></dl></div>
+      <div class="p-sec"><a class="btn primary" href="${p.url}" target="_blank" rel="noopener">Open on GitHub ↗</a></div>`;
+  } else if (sel.type === "idea") {
+    const i = S.ideas.find(x => x.id === sel.id); if (!i) { S.sel = null; return renderInspector(); }
+    html = `<div class="p-sec"><div style="display:flex;justify-content:space-between;gap:8px"><div><p class="ins-title">Sticky</p><p class="ins-sub">Added ${i.createdAt ? ago(i.createdAt) : ""}</p></div>${closeBtn}</div></div>
+      <div class="p-sec"><p class="p-head">Idea</p><textarea id="ideaText" rows="4" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;font-size:13px;background:var(--panel);color:var(--fg);resize:vertical">${esc(i.text || "")}</textarea></div>
+      <div class="p-sec"><p class="p-head">Fill</p><div style="display:flex;gap:6px">${COLORS.map(c => `<button class="swatch ${i.color===c?"on":""}" data-idea-color="${c}" style="background:var(--s-${c})" aria-label="${c}"></button>`).join("")}</div></div>
+      <div class="p-sec"><p class="p-head">Status</p><div class="seg" id="ideaStatus">${Object.entries(STATUS).map(([k,l]) => `<button data-idea-status="${k}" class="${(i.status||"new")===k?"on":""}">${l}</button>`).join("")}</div></div>
+      <div class="p-sec"><p class="p-head">Next steps <span>${i.steps ? "from Claude" : ""}</span></p>
+        ${i.steps && i.steps.length ? `<ol class="steps">${i.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : `<p class="note" style="margin-top:0">Ask Claude to turn this idea into three concrete next steps.</p>`}
+        <div class="ins-actions" style="margin-top:8px"><button class="btn" data-act="develop" id="developBtn">${i.steps ? "Redo next steps" : "Develop with Claude"}</button></div>
+        <p class="note" id="devMsg"></p></div>
+      <div class="p-sec"><div class="ins-actions"><button class="btn" data-vote="${i.id}">▲ Upvote (${i.votes||0})</button><button class="btn danger" data-act="delete-idea">Delete</button></div></div>`;
+  }
+  R.innerHTML = html;
+  R.dataset.empty = String(!sel || sel.type === "frame");
+  const ta = $("#ideaText");
+  if (ta) ta.oninput = () => queueIdeaWrite(sel.id, { text: ta.value }, 500);
+}
+
+/* ---------- selection ---------- */
+function itemEl(sel) {
+  if (!sel) return null;
+  if (sel.type === "frame") return document.getElementById("f-" + sel.id);
+  if (sel.type === "agent") return document.querySelector(`#agents [data-agent="${sel.id}"]`);
+  if (sel.type === "session") return document.querySelector(`#kanban [data-session="${sel.id}"]`);
+  if (sel.type === "idea") return document.querySelector(`[data-idea="${sel.id}"]`);
+  return null;
+}
+function select(sel) {
+  S.sel = sel; S.confirm = null;
+  document.querySelectorAll(".fwrap").forEach(f => f.classList.toggle("sel", !!(sel && sel.type === "frame" && f.dataset.frame === sel.id)));
+  updateBadges();
+  renderNav(); renderAgents(); renderSessions(); renderCode(); renderIdeas(); renderInspector();
+}
+function updateBadges() {
+  document.querySelectorAll(".fwrap").forEach(f => { const fr = f.querySelector(".frame"); f.querySelector(".size-badge").textContent = `${Math.round(fr.offsetWidth)} × ${Math.round(fr.offsetHeight)}`; });
+}
+function scrollToEl(el) { if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); }
+function jump(id) {
+  select({ type:"frame", id });
+  const el = document.getElementById("f-" + id);
+  if (el) $("#canvas").scrollTo({ top: el.offsetTop * S.zoom - 12, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  $("#left").classList.remove("open");
+  document.querySelectorAll("#chips button").forEach(b => b.classList.toggle("on", b.dataset.jump === id));
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg, action) {
+  clearTimeout(toastT);
+  $("#toastHost").innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${action ? `<button id="toastAct">${esc(action.label)}</button>` : ""}</div>`;
+  if (action) $("#toastAct").onclick = () => { action.fn(); $("#toastHost").innerHTML = ""; };
+  toastT = setTimeout(() => $("#toastHost").innerHTML = "", 5000);
+}
+
+/* ---------- live data: Claude Code Remote connector ---------- */
+const SERVER = "Claude Code Remote";
+let mcp = null;
+function payloadOf(res) {
+  let p = res && res.payload !== undefined ? res.payload : res;
+  if (typeof p === "string") { const a = p.indexOf("{"), b = p.lastIndexOf("}"); if (a >= 0 && b > a) { try { p = JSON.parse(p.slice(a, b + 1)); } catch {} } }
+  return p || {};
+}
+function connectorMsg(e) {
+  const c = e && e.code;
+  if (c === "server_not_connected" || c === "server_not_found") return `Add ${SERVER} in claude.ai Settings → Connectors to see live data.`;
+  if (c === "needs_reauth") return `Reconnect ${SERVER} in claude.ai Settings → Connectors.`;
+  if (c === "not_in_manifest" || c === "approval_required" || c === "consent_required") return `Live data is off for this page. Allow ${SERVER} when asked, or from the page's Permissions menu.`;
+  if (c === "selection_required") return `Choose which ${SERVER} connector to use when claude.ai asks.`;
+  if (c === "blocked_by_policy") return `Your organization's policy blocks ${SERVER} here.`;
+  if (c === "server_unavailable" || c === "upstream_error") return `${SERVER} didn't answer. Showing the last data; try Refresh in a minute.`;
+  return `Couldn't load live data (${c || "unknown"}). Showing the last data.`;
+}
+function setLive(state, text) { $("#livePill").dataset.state = state; $("#liveText").textContent = text; }
+function normTrigger(t) {
+  const lr = t.last_run;
+  return {
+    id: t.id, name: t.name, cron: t.cron_expression || "", enabled: !!t.enabled, updated: t.updated_at,
+    next: t.next_run_at, created: t.created_at,
+    last: lr && lr.status ? { s: lr.status.replace("ROUTINE_RUN_STATUS_", ""), at: lr.fired_at, r: (lr.failure_reason || "").replace("ROUTINE_RUN_FAILURE_REASON_", "").replace("UNSPECIFIED", "") || undefined } : null,
+    what: ((t.derived_state && t.derived_state.prompt) || "").slice(0, 700),
+    connectors: (t.mcp_connections || []).map(c => c.name.replace(/_/g, " ")),
+  };
+}
+async function loadTriggers() {
+  const all = []; let cursor;
+  for (let page = 0; page < 10; page++) {
+    const input = { limit: 50 }; if (cursor) input.cursor = cursor;
+    const res = await mcp.callTool(SERVER, "list_triggers", input, { cache: { staleTime: 30000, gcTime: 600000 } });
+    const p = payloadOf(res);
+    (p.data || []).forEach(t => all.push(normTrigger(t)));
+    if (!p.has_more || !p.next_cursor) break; cursor = p.next_cursor;
+  }
+  return all.filter(t => t.cron);
+}
+async function loadSessions() {
+  const res = await mcp.callTool(SERVER, "list_sessions", { mine: true, limit: 50 }, { cache: { staleTime: 30000, gcTime: 600000 } });
+  const p = payloadOf(res), d = (p.ccr && p.ccr.data) || p.data || [];
+  return d.map(s => ({
+    id: s.id, title: s.title || "Untitled session",
+    bucket: (s.status_bucket || "").replace("SESSION_STATUS_BUCKET_", "") || "COMPLETED",
+    updated: s.updated_at,
+    summary: (s.post_turn_summary && (s.post_turn_summary.needs_action || s.post_turn_summary.recent_action)) || s.task_summary || "",
+  }));
+}
+async function refreshLive(manual) {
+  if (!mcp) { if (manual) toast("Live data isn't available in this view. Showing the snapshot."); return; }
+  setLive("loading", "Refreshing");
+  if (manual) { try { await mcp.invalidate(SERVER); } catch {} }
+  const [tr, se] = await Promise.allSettled([loadTriggers(), loadSessions()]);
+  $("#agentsErr").innerHTML = ""; $("#sessErr").innerHTML = "";
+  if (tr.status === "fulfilled" && tr.value.length) { S.triggers = tr.value; S.trigAsOf = new Date().toISOString(); }
+  else if (tr.status === "rejected") $("#agentsErr").innerHTML = `<div class="sec-err">${esc(connectorMsg(tr.reason))}</div>`;
+  if (se.status === "fulfilled" && se.value.length) { S.sessions = se.value; S.sessAsOf = new Date().toISOString(); }
+  else if (se.status === "rejected") $("#sessErr").innerHTML = `<div class="sec-err">${esc(connectorMsg(se.reason))}</div>`;
+  const ok = tr.status === "fulfilled" || se.status === "fulfilled";
+  S.live = ok;
+  if (ok) setLive("live", "Live");
+  else { setLive("error", "Snapshot"); $("#agentsErr").innerHTML = ""; $("#sessErr").innerHTML = ""; toast(connectorMsg(tr.reason)); }
+  renderAll();
+}
+async function agentAction(kind, t) {
+  S.busy = true; renderInspector();
+  try {
+    if (kind === "run") {
+      await mcp.callTool(SERVER, "fire_trigger", { trigger_id: t.id }, { cache: false });
+      toast(`${t.name} started. Its result shows here after it finishes.`);
+    } else {
+      await mcp.callTool(SERVER, "update_trigger", { trigger_id: t.id, enabled: !t.enabled }, { cache: false });
+      toast(`${t.name} ${t.enabled ? "paused" : "turned on"}.`);
+    }
+    S.busy = false; S.confirm = null;
+    await refreshLive(true);
+  } catch (e) {
+    S.busy = false; S.confirm = null; renderInspector();
+    const m = $("#actMsg");
+    if (m) m.textContent = e && e.code === "tool_error" ? `${SERVER} refused: ${e.message}` :
+      (e && (e.code === "server_unavailable" || e.code === "upstream_error")) ? "No answer from the connector. It may still have gone through; check after Refresh before trying again." : connectorMsg(e);
+  }
+}
+
+/* ---------- ideas: shared db ---------- */
+let db = null, canWrite = true;
+const writeChains = {}, writeTimers = {};
+function queueIdeaWrite(id, patch, delay = 0) {
+  const i = S.ideas.find(x => x.id === id); if (i) Object.assign(i, patch);
+  writeTimers[id] = writeTimers[id] || {};
+  Object.assign(writeTimers[id].patch ||= {}, patch);
+  clearTimeout(writeTimers[id].t);
+  writeTimers[id].t = setTimeout(() => {
+    const p = writeTimers[id].patch; writeTimers[id].patch = null;
+    writeChains[id] = (writeChains[id] || Promise.resolve()).then(() => db && db.collection("ideas").doc(id).update({ ...p, updatedAt: new Date().toISOString() })).catch(onDbErr);
+  }, delay);
+  renderIdeas();
+}
+function onDbErr(e) {
+  if (e && e.code === "invalid_argument") { canWrite = false; $("#ideasNote").textContent = "You can view this board, but your access level doesn't allow changes."; }
+  else if (e && e.code === "quota_exceeded") toast("The ideas board is full. Delete a few stickies to add more.");
+  else toast("Couldn't save that change. Check your connection and try again.");
+}
+async function addIdea(x, y) {
+  if (!db) { toast("The ideas board isn't connected in this view."); return; }
+  if (!canWrite) { toast("Your access level doesn't allow adding ideas."); return; }
+  const board = $("#figjam");
+  if (x == null) { x = board.scrollLeft + 40 + Math.random() * 120; y = board.scrollTop + 40 + Math.random() * 80; }
+  const ref = db.collection("ideas").doc();
+  const doc = { text: "", color: S.color, x: Math.round(x), y: Math.round(y), votes: 0, status: "new", createdAt: new Date().toISOString() };
+  S.ideas.push({ id: ref.id, ...doc });
+  select({ type:"idea", id: ref.id });
+  writeChains[ref.id] = ref.set(doc).catch(onDbErr);
+  setTimeout(() => startEdit(ref.id), 30);
+}
+function startEdit(id) {
+  const el = document.querySelector(`[data-idea="${id}"]`); if (!el || el.querySelector("textarea")) return;
+  const i = S.ideas.find(x => x.id === id); if (!i) return;
+  const tx = el.querySelector(".tx"); tx.style.display = "none";
+  const ta = document.createElement("textarea"); ta.id = "edit-" + id; ta.value = i.text || ""; ta.placeholder = "Type your idea…";
+  el.insertBefore(ta, tx); ta.focus();
+  ta.addEventListener("pointerdown", e => e.stopPropagation());
+  ta.oninput = () => queueIdeaWrite(id, { text: ta.value }, 600);
+  ta.onblur = () => { ta.remove(); tx.style.display = ""; renderIdeas(); renderInspector(); };
+  ta.onkeydown = e => { if (e.key === "Escape") ta.blur(); };
+}
+function deleteIdea(id) {
+  const i = S.ideas.find(x => x.id === id); if (!i || !db) return;
+  const backup = { ...i }; delete backup.id;
+  S.ideas = S.ideas.filter(x => x.id !== id); S.sel = null;
+  select(null);
+  (writeChains[id] || Promise.resolve()).then(() => db.collection("ideas").doc(id).delete()).catch(onDbErr);
+  toast("Sticky deleted", { label: "Undo", fn: () => { db.collection("ideas").doc(id).set(backup).catch(onDbErr); S.ideas.push({ id, ...backup }); renderIdeas(); } });
+}
+async function developIdea(i) {
+  const msg = $("#devMsg"), btn = $("#developBtn");
+  const sample = await claude.use("sample");
+  if (!sample) { msg.textContent = "Claude isn't available on this view."; return; }
+  if (!(i.text || "").trim()) { msg.textContent = "Write the idea first."; return; }
+  btn.disabled = true; msg.textContent = "Thinking…";
+  try {
+    const r = await sample(`Keith Ayers is the Executive Director of The Court at Round Rock (a 142-unit senior living community in Texas) and also owns Haul Good Junk Removal. He runs many scheduled AI agents for both. Here is one of his ideas:\n\n"${i.text}"\n\nGive exactly 3 concrete, practical next steps he could take this week. One short line each, starting with a verb. Reply with only the 3 lines, no numbering, no preamble.`, { modelTier: "quick", cache: false });
+    const steps = (r.text || "").split("\n").map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean).slice(0, 3);
+    if (!steps.length) throw { code: "empty" };
+    queueIdeaWrite(i.id, { steps });
+    renderInspector();
+  } catch (e) {
+    btn.disabled = false;
+    msg.textContent = e && e.code === "not_granted" ? "Allow Claude for this page to use this." : e && e.code === "rate_limited" ? "Too many requests. Try again in a minute." : "Claude didn't return next steps. Try again.";
+  }
+}
+
+/* ---------- drag on figjam ---------- */
+let drag = null;
+$("#figjamInner").addEventListener("pointerdown", e => {
+  const el = e.target.closest(".sticky");
+  if (e.target.closest(".vote")) return;
+  if (!el) {
+    if (S.tool === "sticky") { const r = $("#figjamInner").getBoundingClientRect(); addIdea((e.clientX - r.left) / S.zoom - 92, (e.clientY - r.top) / S.zoom - 40); setTool("move"); }
+    else if (S.sel && S.sel.type === "idea") select(null);
+    return;
+  }
+  const id = el.dataset.idea, i = S.ideas.find(x => x.id === id); if (!i) return;
+  if (S.sel?.type !== "idea" || S.sel.id !== id) select({ type:"idea", id });
+  const el2 = document.querySelector(`[data-idea="${id}"]`);
+  drag = { id, el: el2, sx: e.clientX, sy: e.clientY, ox: i.x || 0, oy: i.y || 0, moved: false };
+  el2.setPointerCapture(e.pointerId);
+});
+document.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dx = (e.clientX - drag.sx) / S.zoom, dy = (e.clientY - drag.sy) / S.zoom;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  if (!canWrite) return;
+  drag.moved = true; drag.el.classList.add("dragging");
+  drag.x = Math.max(0, Math.min(1600 - 184, drag.ox + dx)); drag.y = Math.max(0, Math.min(1100 - 168, drag.oy + dy));
+  drag.el.style.left = drag.x + "px"; drag.el.style.top = drag.y + "px";
+});
+document.addEventListener("pointerup", () => {
+  if (!drag) return; const d = drag; drag = null;
+  d.el.classList.remove("dragging");
+  if (d.moved) queueIdeaWrite(d.id, { x: Math.round(d.x), y: Math.round(d.y) });
+});
+$("#figjamInner").addEventListener("dblclick", e => { const el = e.target.closest(".sticky"); if (el && canWrite) startEdit(el.dataset.idea); });
+
+/* ---------- events ---------- */
+function setTool(t) { S.tool = t; document.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === t))); $("#figjam").classList.toggle("tool-sticky", t === "sticky"); if (t === "sticky") jump("ideas"); }
+document.addEventListener("click", e => {
+  const g = (sel) => e.target.closest(sel);
+  let b;
+  if ((b = g("[data-tool]"))) return setTool(b.dataset.tool);
+  if ((b = g("[data-jump]"))) return jump(b.dataset.jump);
+  if ((b = g("[data-select-frame]"))) { return b.closest("#left") ? jump(b.dataset.selectFrame) : select({ type:"frame", id:b.dataset.selectFrame }); }
+  if ((b = g("[data-agent]"))) { select({ type:"agent", id:b.dataset.agent }); if (b.closest("#left, #timeline")) scrollToEl(itemEl(S.sel)); $("#left").classList.remove("open"); return; }
+  if ((b = g("[data-session]"))) { select({ type:"session", id:b.dataset.session }); if (b.closest("#left")) scrollToEl(itemEl(S.sel)); $("#left").classList.remove("open"); return; }
+  if ((b = g("[data-pr]"))) return select({ type:"pr", id:+b.dataset.pr });
+  if ((b = g("[data-filter]"))) { S.agentFilter = b.dataset.filter; return renderAgents(); }
+  if ((b = g("[data-close-ins]"))) return select(null);
+  if ((b = g("[data-color]"))) { S.color = b.dataset.color; return renderIdeas(); }
+  if ((b = g("[data-vote]"))) { if (!canWrite) return; const i = S.ideas.find(x => x.id === b.dataset.vote); if (i) { queueIdeaWrite(i.id, { votes: (i.votes || 0) + 1 }); renderInspector(); } return; }
+  if ((b = g("[data-idea-pick]"))) return select({ type:"idea", id:b.dataset.ideaPick });
+  if ((b = g("[data-idea-color]"))) { queueIdeaWrite(S.sel.id, { color: b.dataset.ideaColor }); return renderInspector(); }
+  if ((b = g("[data-idea-status]"))) { queueIdeaWrite(S.sel.id, { status: b.dataset.ideaStatus }); return renderInspector(); }
+  if ((b = g("#viewSeg [data-view]"))) { $("#figjamWrap").dataset.view = b.dataset.view; document.querySelectorAll("#viewSeg button").forEach(x => x.classList.toggle("on", x === b)); try { localStorage.setItem("wh-view", b.dataset.view); } catch {} return; }
+  if ((b = g("[data-act]"))) {
+    const act = b.dataset.act;
+    if (act === "toggle" || act === "run") { S.confirm = { id: S.sel.id, kind: act }; return renderInspector(); }
+    if (act === "cancel") { S.confirm = null; return renderInspector(); }
+    if (act === "confirm") { const t = S.triggers.find(x => x.id === S.confirm.id); return agentAction(S.confirm.kind, t); }
+    if (act === "delete-idea") return deleteIdea(S.sel.id);
+    if (act === "develop") return developIdea(S.ideas.find(x => x.id === S.sel.id));
+  }
+});
+$("#addIdea").onclick = () => { jump("ideas"); addIdea(); };
+$("#refreshBtn").onclick = () => refreshLive(true);
+$("#layersBtn").onclick = () => $("#left").classList.toggle("open");
+$("#zoomBtn").onclick = () => {
+  const Z = [1, .75, .5, 1.25]; S.zoom = Z[(Z.indexOf(S.zoom) + 1) % Z.length];
+  $("#board").style.zoom = S.zoom; $("#zoomBtn").textContent = Math.round(S.zoom * 100) + "%";
+};
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input, textarea, [contenteditable]")) return;
+  if (e.key === "s" || e.key === "S") setTool("sticky");
+  else if (e.key === "v" || e.key === "V") setTool("move");
+  else if (e.key === "Escape") { setTool("move"); select(null); }
+  else if ((e.key === "Delete" || e.key === "Backspace") && S.sel && S.sel.type === "idea" && canWrite) { e.preventDefault(); deleteIdea(S.sel.id); }
+  else if (e.key === "Enter" && S.sel && S.sel.type === "idea" && canWrite) { e.preventDefault(); startEdit(S.sel.id); }
+});
+window.addEventListener("resize", updateBadges);
+
+function renderAll() { renderNav(); renderOverview(); renderAgents(); renderSessions(); renderCode(); renderIdeas(); renderInspector(); updateBadges(); }
+
+/* ---------- boot ---------- */
+try { const v = localStorage.getItem("wh-view") || (innerWidth < 600 ? "list" : "board"); $("#figjamWrap").dataset.view = v; document.querySelectorAll("#viewSeg button").forEach(x => x.classList.toggle("on", x.dataset.view === v)); } catch {}
+renderAll();
+setInterval(() => { renderOverview(); }, 60000);
+
+(async () => {
+  if (!window.claude || !claude.use) { S.ideasReady = true; $("#ideasNote").textContent = "Open this page on claude.ai to save ideas."; renderAll(); return; }
+  claude.use("user").then(async u => { if (!u) return; const c = await u.can("data.write"); if (c === false) { canWrite = false; $("#ideasNote").textContent = "You can view this board, but your access level doesn't allow changes."; } }).catch(() => {});
+  claude.use("db").then(d => {
+    db = d;
+    if (!db) { S.ideasReady = true; $("#ideasNote").textContent = "Sign in on claude.ai to see and save ideas."; renderAll(); return; }
+    db.collection("ideas").onSnapshot(snap => {
+      const editing = document.activeElement && document.activeElement.tagName === "TEXTAREA";
+      S.ideas = snap.docs.map(d => {
+        const local = S.ideas.find(x => x.id === d.id), pending = writeTimers[d.id] && writeTimers[d.id].patch;
+        return { id: d.id, ...d.data(), ...(pending || {}), ...(editing && local && S.sel?.id === d.id ? { text: local.text } : {}) };
+      });
+      S.ideasReady = true; renderIdeas(); renderNav(); renderOverview();
+      if (!editing) renderInspector();
+    }, e => { S.ideasReady = true; $("#ideasErr").innerHTML = `<div class="sec-err">The ideas board stopped syncing. Reload the page to reconnect.</div>`; renderIdeas(); });
+  });
+  mcp = await claude.use("mcp");
+  if (mcp) refreshLive(false); else setLive("snapshot", "Snapshot");
+})();
+</script>
