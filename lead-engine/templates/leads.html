@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Leads{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Leads</h1><div class="sub">{{ leads|length }} shown</div></div>
+  <form class="row shrink" method="get">
+    <input name="q" value="{{ q }}" placeholder="Search name, phone, email, service" style="min-width:260px">
+    <select name="stage" class="shrink" style="width:auto">
+      <option value="">All stages</option>
+      {% for k, label in stages %}<option value="{{ k }}" {{ 'selected' if stage == k }}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn shrink">Filter</button>
+  </form>
+</div>
+
+<div class="split">
+  <div class="card flush">
+    {% if leads %}
+    <div class="table-wrap"><table>
+      <tr><th>Lead</th><th>Contact</th><th>Stage</th><th>Score</th><th>Next follow-up</th><th>Updated</th></tr>
+      {% for l in leads %}
+      <tr class="click" onclick="location='{{ url_for('lead_detail', lead_id=l.id) }}'">
+        <td><span class="strong">{{ ui.lead_label(l) }}</span>{% if l.ai_paused %} <span class="badge bad">human</span>{% endif %}{% if l.opted_out %} <span class="badge">opted out</span>{% endif %}
+          <div class="small muted">{{ l.service or '—' }}{% if l.timeline %} · {{ l.timeline }}{% endif %}</div></td>
+        <td class="small">{{ l.phone or '' }}<div class="muted">{{ l.email or '' }}</div></td>
+        <td>{{ ui.stage_badge(l.stage) }}</td>
+        <td><span class="badge {{ 'ok' if l.score >= 70 else 'warn' if l.score >= 40 else '' }}">{{ l.score }}</span></td>
+        <td class="nowrap small">{{ l.next_follow_up_at|ago if l.next_follow_up_at else '—' }}</td>
+        <td class="nowrap small muted">{{ l.updated_at|ago }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="empty">No leads match.</div>{% endif %}
+  </div>
+
+  <div class="card" id="new">
+    <h2>Add a lead</h2>
+    <form method="post" action="{{ url_for('lead_create') }}">
+      <div class="field"><label>Name</label><input name="name"></div>
+      <div class="row">
+        <div class="field"><label>Phone</label><input name="phone" placeholder="+1 555 123 4567"></div>
+        <div class="field"><label>Email</label><input name="email" type="email"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Service</label><input name="service"></div>
+        <div class="field"><label>Timeline</label><input name="timeline" placeholder="ASAP, next week…"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Deal value ($)</label><input name="value" type="number" min="0" step="1"></div>
+        <div class="field"><label>Source</label><input name="source" value="manual"></div>
+      </div>
+      <div class="field"><label>Notes / request</label><textarea name="details"></textarea></div>
+      <div class="field"><label class="check"><input type="checkbox" name="instant_reply" value="1" checked> Send instant AI reply (speed-to-lead)</label></div>
+      <button class="btn primary">Add lead</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

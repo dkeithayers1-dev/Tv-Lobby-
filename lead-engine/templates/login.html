@@ -1,0 +1,9 @@
+{% extends "public/_layout.html" %}
+{% block title %}Sign in · LeadPilot{% endblock %}
+{% block heading %}Sign in{% endblock %}
+{% block content %}
+<form class="card" method="post">
+  <div class="field"><label>Admin password</label><input type="password" name="password" autofocus required></div>
+  <button class="btn primary" style="width:100%">Sign in</button>
+</form>
+{% endblock %}

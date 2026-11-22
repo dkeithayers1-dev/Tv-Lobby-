@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ ui.lead_label(lead) }}{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <h1>{{ ui.lead_label(lead) }} {{ ui.stage_badge(lead.stage) }}
+      {% if lead.ai_paused %}<span class="badge bad">AI paused · team handling</span>{% endif %}
+      {% if lead.opted_out %}<span class="badge">Opted out</span>{% endif %}</h1>
+    <div class="sub">Source: {{ (lead.source or '').replace('_',' ') }} · created {{ lead.created_at|ago }}
+      {% if first_reply_secs is not none %} · first reply in <b>{{ first_reply_secs|duration }}</b>{% endif %}</div>
+  </div>
+  <div class="row shrink">
+    <form method="post" action="{{ url_for('lead_toggle_ai', lead_id=lead.id) }}"><button class="btn">{{ 'Resume AI' if lead.ai_paused else 'Take over (pause AI)' }}</button></form>
+    <form method="post" action="{{ url_for('lead_stage', lead_id=lead.id) }}" class="row shrink">
+      <select name="stage" onchange="this.form.submit()" style="width:auto">
+        {% for k, label in stages %}<option value="{{ k }}" {{ 'selected' if lead.stage == k }}>{{ label }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="split">
+  <div class="grid">
+    <div class="card">
+      <div class="card-head"><h2>Conversation</h2><span class="small muted">All channels · live</span></div>
+      <div class="thread" id="thread">
+        {% for m in msgs %}{{ ui.bubble(m) }}{% else %}<div class="empty">No messages yet.</div>{% endfor %}
+      </div>
+      <form id="composer" method="post" action="{{ url_for('lead_message', lead_id=lead.id) }}" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div class="row">
+          <select name="channel" class="shrink" style="width:auto">
+            <option value="">Best channel</option>
+            {% if lead.phone %}<option value="sms">SMS</option><option value="whatsapp">WhatsApp</option>{% endif %}
+            {% if lead.email %}<option value="email">Email</option>{% endif %}
+            {% if lead.source == 'website_chat' %}<option value="web">Web chat</option>{% endif %}
+          </select>
+          <input name="subject" placeholder="Email subject (optional)">
+        </div>
+        <div class="field" style="margin-top:8px"><textarea name="body" placeholder="Write a reply as your team…" required></textarea></div>
+        <div class="row"><div class="small muted">Tip: use the booking link <code>{{ booking_link }}</code></div><button class="btn primary shrink">Send</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Notes</h2>
+      <form method="post" action="{{ url_for('lead_note', lead_id=lead.id) }}" class="row">
+        <input name="body" placeholder="Add an internal note…" required><button class="btn shrink">Add</button>
+      </form>
+      <ul class="list" style="margin-top:8px">
+        {% for n in notes %}<li><div style="white-space:pre-wrap">{{ n.body }}</div><span class="small muted nowrap">{{ n.created_at|ago }}</span></li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Lead details</h2>
+      <form method="post" action="{{ url_for('lead_update', lead_id=lead.id) }}">
+        <div class="field"><label>Name</label><input name="name" value="{{ lead.name or '' }}"></div>
+        <div class="row">
+          <div class="field"><label>Phone</label><input name="phone" value="{{ lead.phone or '' }}"></div>
+          <div class="field"><label>Email</label><input name="email" value="{{ lead.email or '' }}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Service</label><input name="service" value="{{ lead.service or '' }}"></div>
+          <div class="field"><label>Timeline</label><input name="timeline" value="{{ lead.timeline or '' }}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Budget</label><input name="budget" value="{{ lead.budget or '' }}"></div>
+          <div class="field"><label>Deal value ($)</label><input name="value" type="number" step="1" value="{{ '%.0f'|format(lead.value or 0) }}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Preferred channel</label>
+            <select name="preferred_channel">{% for c in ['sms','whatsapp','email','web'] %}<option {{ 'selected' if lead.preferred_channel == c }}>{{ c }}</option>{% endfor %}</select></div>
+          <div class="field"><label>Next follow-up</label><input type="datetime-local" name="next_follow_up_at" value="{{ (lead.next_follow_up_at or '')[:16].replace(' ','T') }}"></div>
+        </div>
+        <div class="field"><label>Job details</label><textarea name="details">{{ lead.details or '' }}</textarea></div>
+        <div class="row"><div class="small muted">AI lead score: <b>{{ lead.score }}</b>/100</div><button class="btn primary shrink">Save</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Appointments</h2>
+      {% for a in appts %}
+        <div class="row small" style="margin-bottom:6px;align-items:center">
+          <div>{{ human_time(a.starts_at) }} <span class="badge {{ 'ok' if a.status in ('confirmed','completed') else 'bad' if a.status in ('cancelled','no_show') else 'warn' }}">{{ a.status.replace('_',' ') }}</span></div>
+          <a class="shrink" href="{{ url_for('manage_appointment', token=a.token) }}" target="_blank">Customer link ↗</a>
+        </div>
+      {% else %}<p class="muted small">None yet.</p>{% endfor %}
+      <form method="post" action="{{ url_for('lead_book', lead_id=lead.id) }}" style="margin-top:10px">
+        <div class="field"><label>{{ 'Reschedule to' if appts and appts[0].status in ('scheduled','confirmed') else 'Book a time' }}</label>
+          <select name="starts_at">{% for s in slots %}<option value="{{ s.strftime('%Y-%m-%d %H:%M:%S') }}">{{ human_time(s) }}</option>{% endfor %}</select></div>
+        <label class="check" style="margin-bottom:8px"><input type="checkbox" name="notify" value="1" checked> Send confirmation + reminders</label>
+        <button class="btn">Save appointment</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Follow-up sequences</h2>
+      {% for e in enrollments %}
+        {% set steps = e.steps|fromjson %}
+        <div class="small" style="margin-bottom:8px">
+          <b>{{ e.sequence_name }}</b>
+          <span class="badge {{ 'brand' if e.status == 'active' else 'ok' if e.stop_reason == 'replied' else '' }}">{{ e.status }}{% if e.stop_reason %} · {{ e.stop_reason }}{% endif %}</span>
+          <div class="muted">Step {{ [e.step_index + (0 if e.status == 'active' else 0), steps|length]|min }} of {{ steps|length }} sent{% if e.status == 'active' %}, next {{ lead.next_follow_up_at|ago }}{% endif %}</div>
+        </div>
+      {% else %}<p class="muted small">Not enrolled in any sequence.</p>{% endfor %}
+      <form method="post" action="{{ url_for('lead_enroll', lead_id=lead.id) }}" class="row" style="margin-top:8px">
+        <select name="sequence_id">{% for s in sequences %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+        <button class="btn shrink">Enroll</button>
+      </form>
+      {% if enrollments|selectattr('status','equalto','active')|list %}
+      <form method="post" action="{{ url_for('lead_stop_sequences', lead_id=lead.id) }}" style="margin-top:8px"><button class="btn sm danger">Stop all sequences</button></form>
+      {% endif %}
+    </div>
+
+    <form method="post" action="{{ url_for('lead_delete', lead_id=lead.id) }}" onsubmit="return confirm('Delete this lead and all its history?')">
+      <button class="btn sm danger">Delete lead</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const thread = document.getElementById('thread');
+thread.scrollTop = thread.scrollHeight;
+let last = {{ (msgs[-1].id if msgs else 0) }};
+setInterval(async () => {
+  const r = await fetch(`/api/leads/{{ lead.id }}/messages?after=${last}`);
+  if (!r.ok) return;
+  const rows = await r.json();
+  const draft = document.querySelector('#composer textarea').value.trim();
+  if (rows.length && !draft) location.reload();
+}, 5000);
+</script>
+{% endblock %}

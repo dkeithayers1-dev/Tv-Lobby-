@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Appointments{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Appointments</h1><div class="sub">Confirmations, reminders and reschedule links go out automatically.</div></div>
+  <div class="tabs">
+    <a href="{{ url_for('appointments') }}" class="{{ 'on' if show != 'past' }}">Upcoming</a>
+    <a href="{{ url_for('appointments', show='past') }}" class="{{ 'on' if show == 'past' }}">Past</a>
+  </div>
+</div>
+<div class="card flush">
+  {% if rows %}
+  <div class="table-wrap"><table>
+    <tr><th>When</th><th>Customer</th><th>Service</th><th>Status</th><th>Next reminder</th><th class="right">Actions</th></tr>
+    {% for a in rows %}
+    <tr>
+      <td class="nowrap strong">{{ human_time(a.starts_at) }}<div class="small muted">{{ a.duration }} min</div></td>
+      <td><a href="{{ url_for('lead_detail', lead_id=a.lead_id) }}">{{ a.lead_name or a.phone or a.email }}</a><div class="small muted">{{ a.phone or a.email or '' }}</div></td>
+      <td class="small">{{ a.service or '—' }}</td>
+      <td><span class="badge {{ 'ok' if a.status in ('confirmed','completed') else 'bad' if a.status in ('cancelled','no_show') else 'warn' }}">{{ a.status.replace('_',' ') }}</span></td>
+      <td class="small muted nowrap">{% set r = reminders.get(a.id) %}{{ human_time(r.run_at) if r else '—' }}</td>
+      <td class="right nowrap">
+        {% if a.status in ('scheduled','confirmed') %}
+          {% if show == 'past' %}
+          <form class="inline" method="post" action="{{ url_for('appointment_status', appt_id=a.id) }}"><input type="hidden" name="status" value="completed"><button class="btn sm">Showed up</button></form>
+          <form class="inline" method="post" action="{{ url_for('appointment_status', appt_id=a.id) }}"><input type="hidden" name="status" value="no_show"><button class="btn sm danger">No-show</button></form>
+          {% else %}
+          {% if a.status == 'scheduled' %}<form class="inline" method="post" action="{{ url_for('appointment_status', appt_id=a.id) }}"><input type="hidden" name="status" value="confirmed"><button class="btn sm">Mark confirmed</button></form>{% endif %}
+          <form class="inline" method="post" action="{{ url_for('appointment_status', appt_id=a.id) }}" onsubmit="return confirm('Cancel and notify the customer?')"><input type="hidden" name="status" value="cancelled"><button class="btn sm danger">Cancel</button></form>
+          {% endif %}
+        {% endif %}
+        <a class="btn sm" href="{{ url_for('manage_appointment', token=a.token) }}" target="_blank">Link ↗</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<div class="empty">No {{ 'past' if show == 'past' else 'upcoming' }} appointments.</div>{% endif %}
+</div>
+{% endblock %}

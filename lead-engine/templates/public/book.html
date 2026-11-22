@@ -1,0 +1,13 @@
+{% extends "public/_layout.html" %}
+{% block title %}Book a time · {{ biz }}{% endblock %}
+{% block heading %}Pick a time{% endblock %}
+{% block content %}
+{% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+<form class="card" method="post">
+  <p class="muted" style="margin-top:0">Hi {{ (lead.name or 'there').split(' ')[0] }} — choose a time that suits you{% if lead.service %} for <b>{{ lead.service }}</b>{% endif %}. You'll get a confirmation and reminders.</p>
+  {% if slots %}
+  <div class="slots">{% for s in slots %}<label><input type="radio" name="slot" value="{{ s.strftime('%Y-%m-%d %H:%M:%S') }}" required><span>{{ human_time(s) }}</span></label>{% endfor %}</div>
+  <button class="btn primary" style="margin-top:12px;width:100%">Book this time</button>
+  {% else %}<p class="muted">No open times right now — reply to our message and we'll find one.</p>{% endif %}
+</form>
+{% endblock %}

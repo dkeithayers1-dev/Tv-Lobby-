@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ biz }}{% endblock %} · LeadPilot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="logo"><span>LP</span> LeadPilot</div>
+    {% set p = request.path %}
+    <nav class="nav">
+      <div class="sect">Overview</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if p == '/' }}">Dashboard</a>
+      <a href="{{ url_for('inbox') }}" class="{{ 'active' if p.startswith('/inbox') }}">Inbox {% if unread %}<span class="badge bad">{{ unread }}</span>{% endif %}</a>
+      <a href="{{ url_for('pipeline') }}" class="{{ 'active' if p.startswith('/pipeline') }}">Pipeline</a>
+      <a href="{{ url_for('leads') }}" class="{{ 'active' if p.startswith('/leads') }}">Leads</a>
+      <a href="{{ url_for('appointments') }}" class="{{ 'active' if p.startswith('/appointments') }}">Appointments</a>
+      <div class="sect">Automations</div>
+      <a href="{{ url_for('sequences') }}" class="{{ 'active' if p.startswith('/sequences') }}">Follow-up sequences</a>
+      <a href="{{ url_for('settings') }}" class="{{ 'active' if p.startswith('/settings') }}">AI agent &amp; settings</a>
+      <a href="{{ url_for('simulator') }}" class="{{ 'active' if p.startswith('/simulator') }}">Test console</a>
+      <div class="sect">Public pages</div>
+      <a href="{{ url_for('contact_form') }}" target="_blank">Lead form ↗</a>
+      <a href="{{ url_for('chat') }}" target="_blank">Website chat ↗</a>
+    </nav>
+    <div class="side-foot">
+      <div><span class="dot {{ 'on' if ai_live else 'off' }}"></span> AI: {{ 'Claude' if ai_live else 'rules engine' }}</div>
+      {% if auth_on %}<form method="post" action="{{ url_for('logout') }}" style="margin-top:8px"><button class="btn sm">Log out</button></form>{% endif %}
+    </div>
+  </aside>
+  <main class="main">
+    {% if not auth_on %}<div class="banner">Admin login is off. Set <code>ADMIN_PASSWORD</code> before exposing this app to the internet.</div>{% endif %}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

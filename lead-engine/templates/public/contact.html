@@ -1,0 +1,32 @@
+{% extends "public/_layout.html" %}
+{% block title %}Contact {{ biz }}{% endblock %}
+{% block heading %}Get a fast quote{% endblock %}
+{% block content %}
+{% if done %}
+<div class="card" style="text-align:center">
+  <h2>Thanks — we're on it!</h2>
+  <p class="muted">You'll get a text or email from {{ agent }} within seconds to grab a few details and find a time that works.</p>
+</div>
+{% else %}
+<form class="card" method="post">
+  <p class="muted" style="margin-top:0">Tell us what you need. We reply in seconds — day or night.</p>
+  <div class="field"><label>Your name</label><input name="name" required value="{{ form.name or '' }}" autocomplete="name"></div>
+  <div class="row">
+    <div class="field"><label>Mobile phone</label><input name="phone" type="tel" value="{{ form.phone or '' }}" autocomplete="tel" placeholder="(555) 123-4567"></div>
+    <div class="field"><label>Email</label><input name="email" type="email" value="{{ form.email or '' }}" autocomplete="email"></div>
+  </div>
+  <div class="row">
+    <div class="field"><label>What do you need?</label>
+      <select name="service"><option value="">Choose a service…</option>{% for s in services or [] %}<option {{ 'selected' if form.service == s }}>{{ s }}</option>{% endfor %}<option value="Other">Something else</option></select></div>
+    <div class="field"><label>How soon?</label>
+      <select name="timeline"><option value="">Choose…</option>{% for t in ['ASAP','This week','Next week','Within a month','Just researching'] %}<option {{ 'selected' if form.timeline == t }}>{{ t }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="field"><label>Details (optional)</label><textarea name="message">{{ form.message or '' }}</textarea></div>
+  <div class="field"><label>How should we reply?</label>
+    <select name="preferred_channel"><option value="sms">Text message</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
+  <div style="position:absolute;left:-9999px" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
+  <button class="btn primary" style="width:100%">Send — get a reply in seconds</button>
+  <p class="small muted">By submitting you agree to receive messages about your request. Reply STOP to opt out.</p>
+</form>
+{% endif %}
+{% endblock %}

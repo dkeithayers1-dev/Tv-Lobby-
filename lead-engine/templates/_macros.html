@@ -1,0 +1,24 @@
+{% macro stage_badge(stage) -%}
+<span class="badge stage-{{ stage }}">{{ stage_labels.get(stage, stage) }}</span>
+{%- endmacro %}
+
+{% macro lead_label(l) -%}
+{{ l.name or l.phone or l.email or ('Lead #' ~ l.id) }}
+{%- endmacro %}
+
+{% macro channel_badge(ch) -%}
+<span class="badge">{{ {'sms':'SMS','whatsapp':'WhatsApp','email':'Email','voice':'Phone','web':'Web chat'}.get(ch, ch) }}</span>
+{%- endmacro %}
+
+{% macro bubble(m) -%}
+<div class="bubble-wrap {{ m.direction }}">
+  <div class="bubble {{ m.direction }} {{ m.sender }} {{ 'failed' if m.status == 'failed' }}">{{ m.body }}</div>
+  <div class="meta">
+    {{ {'lead':'Customer','ai':'AI','team':'Team','system':'System'}.get(m.sender, m.sender) }} ·
+    {{ {'sms':'SMS','whatsapp':'WhatsApp','email':'Email','voice':'Phone','web':'Web'}.get(m.channel, m.channel) }} ·
+    {{ human_time(m.created_at) }}
+    {% if m.status == 'simulated' %}· <span title="Channel not configured — message logged only">simulated</span>{% endif %}
+    {% if m.status == 'failed' %}· <span style="color:var(--bad)" title="{{ m.error }}">failed: {{ m.error }}</span>{% endif %}
+  </div>
+</div>
+{%- endmacro %}

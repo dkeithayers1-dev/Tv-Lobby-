@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Test console{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Test console</h1><div class="sub">Act as a customer on any channel and watch every automation run — no phone provider needed. Uses exactly the same code paths as the live webhooks.</div></div>
+</div>
+
+<div class="split">
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="field"><label>Channel</label>
+        <select id="channel">
+          <option value="sms">SMS</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="voice">Phone call (AI sales agent)</option>
+          <option value="email">Email</option>
+        </select></div>
+      <div class="field"><label>Customer phone</label><input id="phone" value="+15555550123"></div>
+      <div class="field"><label>Customer email</label><input id="email" value="customer@example.com"></div>
+    </div>
+    <div class="thread" id="thread" style="min-height:320px;background:#fafafa;border-radius:8px;padding:12px"><div class="empty">Send a message as the customer, e.g. “Hi, my AC stopped working — how much is a repair?”</div></div>
+    <form id="send" class="row" style="margin-top:12px">
+      <input id="text" placeholder="Type as the customer…" autocomplete="off" required>
+      <button class="btn primary shrink" id="sendBtn">Send</button>
+    </form>
+    <div class="row small" style="margin-top:12px">
+      <button class="btn sm shrink" onclick="missedCall()">Simulate missed call → text-back</button>
+      <button class="btn sm shrink" onclick="resetLead()">Reset this customer</button>
+      <a class="btn sm shrink" id="openLead" href="#" style="display:none">Open lead in CRM →</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Scheduled automations</h2>
+      <p class="small muted" style="margin-top:0">Reminders and sequence steps run automatically in the background. Fast-forward the next one to see it now.</p>
+      <ul class="list small" id="jobs">
+        {% for j in pending %}
+        <li><div><span class="badge {{ 'brand' if j.kind == 'reminder' else 'warn' }}">{{ j.kind.replace('_',' ') }}</span> {{ j.lead_name or ('lead #' ~ j.lead_id) }}</div><span class="muted nowrap">{{ human_time(j.run_at) }}</span></li>
+        {% else %}<li class="muted">Nothing scheduled yet. Book an appointment or move a lead to “Quote sent”.</li>{% endfor %}
+      </ul>
+      <button class="btn" style="margin-top:10px" onclick="runNext()">Run next scheduled job now</button>
+    </div>
+    <div class="card small">
+      <h2>Try these</h2>
+      <ol style="padding-left:18px;margin:0">
+        <li>“Hi, do you offer financing?” — FAQ answer</li>
+        <li>“My name is Sam, my furnace is broken, need it ASAP” — qualifies + offers times</li>
+        <li>“2” — books slot 2, sends confirmation + schedules reminders</li>
+        <li>“R” — reschedule; “C” — confirm</li>
+        <li>“I want to speak to a manager” — hands off to your team</li>
+        <li>“STOP” — opts out</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const label = {lead:'Customer', ai:'AI', team:'Team', system:'System'};
+function render(msgs, leadId) {
+  const t = $('#thread');
+  t.innerHTML = msgs.map(m => `
+    <div class="bubble-wrap ${m.direction}">
+      <div class="bubble ${m.direction} ${m.sender} ${m.status === 'failed' ? 'failed' : ''}">${esc(m.body)}</div>
+      <div class="meta">${label[m.sender] || m.sender} · ${m.channel}${m.status === 'simulated' ? ' · simulated' : ''}</div>
+    </div>`).join('') || '<div class="empty">No messages.</div>';
+  t.scrollTop = t.scrollHeight;
+  if (leadId) { const a = $('#openLead'); a.href = `/leads/${leadId}`; a.style.display = ''; }
+}
+async function post(url, body) {
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  return r.json();
+}
+$('#send').addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = $('#text').value.trim(); if (!text) return;
+  $('#sendBtn').disabled = true; $('#sendBtn').textContent = 'Thinking…';
+  try {
+    const d = await post('/api/simulate/message', {channel: $('#channel').value, phone: $('#phone').value, email: $('#email').value, text});
+    $('#text').value = '';
+    render(d.messages, d.lead_id);
+  } finally { $('#sendBtn').disabled = false; $('#sendBtn').textContent = 'Send'; }
+});
+async function missedCall() {
+  const d = await post('/api/simulate/missed-call', {phone: $('#phone').value});
+  render(d.messages, d.lead_id);
+}
+async function resetLead() {
+  await post('/api/simulate/reset-lead', {phone: $('#phone').value});
+  render([], null); $('#openLead').style.display = 'none';
+}
+async function runNext() {
+  const d = await post('/api/simulate/run-next-job', {});
+  if (!d.ran) { alert(d.message); return; }
+  location.reload();
+}
+</script>
+{% endblock %}

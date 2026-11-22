@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}AI agent & settings{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>AI agent &amp; settings</h1><div class="sub">Everything the AI knows about your business, your hours, and how each channel connects.</div></div>
+</div>
+
+<div class="split">
+  <div class="grid">
+    <form class="card" method="post">
+      <h2>Business profile (what the AI agent knows)</h2>
+      <div class="row">
+        <div class="field"><label>Business name</label><input name="business_name" value="{{ cfg.business_name }}"></div>
+        <div class="field"><label>AI assistant name</label><input name="agent_name" value="{{ cfg.agent_name }}"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea name="business_description">{{ cfg.business_description }}</textarea></div>
+      <div class="field"><label>Services (comma-separated)</label><input name="services" value="{{ cfg.services }}"></div>
+      <div class="row">
+        <div class="field"><label>Service area</label><input name="service_area" value="{{ cfg.service_area }}"></div>
+        <div class="field"><label>Time zone (IANA)</label><input name="timezone" value="{{ cfg.timezone }}"></div>
+      </div>
+
+      <h2 style="margin-top:12px">Business hours &amp; booking</h2>
+      {% for d in days %}{% set h = cfg.hours.get(d) %}
+      <div class="row" style="align-items:center;margin-bottom:6px">
+        <label class="check shrink" style="width:80px"><input type="checkbox" name="open_{{ d }}" value="1" {{ 'checked' if h }}> {{ d.title() }}</label>
+        <input type="time" name="start_{{ d }}" value="{{ h[0] if h else '09:00' }}">
+        <input type="time" name="end_{{ d }}" value="{{ h[1] if h else '17:00' }}">
+      </div>
+      {% endfor %}
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>Appointment length (min)</label><input name="slot_minutes" type="number" value="{{ cfg.slot_minutes }}"></div>
+        <div class="field"><label>Minimum notice (hours)</label><input name="min_notice_hours" type="number" value="{{ cfg.min_notice_hours }}"></div>
+        <div class="field"><label>Book up to (days ahead)</label><input name="booking_days_ahead" type="number" value="{{ cfg.booking_days_ahead }}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Reminders (hours before, comma-separated)</label><input name="reminder_offsets_hours" value="{{ cfg.reminder_offsets_hours|join(', ') }}"></div>
+        <div class="field"><label>Flag lead overdue after (hours of silence)</label><input name="follow_up_after_hours" type="number" value="{{ cfg.follow_up_after_hours }}"></div>
+      </div>
+      <div class="field"><label>Missed-call text-back message</label><textarea name="missed_call_text">{{ cfg.missed_call_text }}</textarea></div>
+      <div class="field"><label>Public base URL (used in links &amp; Twilio signature checks)</label><input name="public_base_url" value="{{ cfg.public_base_url }}" placeholder="https://leads.yourbusiness.com"></div>
+      <button class="btn primary">Save settings</button>
+    </form>
+
+    <div class="card" id="faqs">
+      <h2>Knowledge base — FAQs the AI can answer</h2>
+      <p class="small muted" style="margin-top:0">The AI only states facts found here or in your business profile. Keywords help the offline rules engine match questions.</p>
+      {% for f in faqs %}
+      <form method="post" action="{{ url_for('faq_save') }}" class="step">
+        <input type="hidden" name="id" value="{{ f.id }}">
+        <div class="field"><label>Question</label><input name="question" value="{{ f.question }}"></div>
+        <div class="field"><label>Answer</label><textarea name="answer" style="min-height:60px">{{ f.answer }}</textarea></div>
+        <div class="row"><div class="field"><label>Keywords</label><input name="keywords" value="{{ f.keywords or '' }}"></div>
+          <div class="shrink"><button class="btn sm">Save</button> <button class="btn sm danger" formaction="{{ url_for('faq_delete', faq_id=f.id) }}">Delete</button></div></div>
+      </form>
+      {% endfor %}
+      <form method="post" action="{{ url_for('faq_save') }}" class="step" style="background:#fff">
+        <h3>Add FAQ</h3>
+        <div class="field"><label>Question</label><input name="question" required></div>
+        <div class="field"><label>Answer</label><textarea name="answer" required style="min-height:60px"></textarea></div>
+        <div class="row"><div class="field"><label>Keywords</label><input name="keywords" placeholder="warranty, guarantee"></div><div class="shrink"><button class="btn primary sm">Add</button></div></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Connections</h2>
+      <ul class="list small">
+        <li><span><span class="dot {{ 'on' if ai_live else 'off' }}"></span> AI brain</span><span>{{ 'Claude (live)' if ai_live else 'Rules engine — set ANTHROPIC_API_KEY' }}</span></li>
+        <li><span><span class="dot {{ 'on' if channels.sms else 'off' }}"></span> SMS</span><span>{{ 'Twilio live' if channels.sms else 'simulated' }}</span></li>
+        <li><span><span class="dot {{ 'on' if channels.whatsapp else 'off' }}"></span> WhatsApp</span><span>{{ 'Twilio live' if channels.whatsapp else 'simulated' }}</span></li>
+        <li><span><span class="dot {{ 'on' if channels.voice else 'off' }}"></span> Phone AI agent</span><span>{{ 'Twilio live' if channels.voice else 'not connected' }}</span></li>
+        <li><span><span class="dot {{ 'on' if channels.email else 'off' }}"></span> Email</span><span>{{ 'SMTP live' if channels.email else 'simulated' }}</span></li>
+        <li><span><span class="dot {{ 'on' if api_key_set else 'off' }}"></span> Lead API</span><span>{{ 'enabled' if api_key_set else 'set LEAD_API_KEY' }}</span></li>
+      </ul>
+      <p class="small muted">Credentials live in <code>.env</code> — see the README.</p>
+    </div>
+    <div class="card">
+      <h2>Webhook &amp; embed URLs</h2>
+      <div class="small">
+        <p><b>Twilio — SMS &amp; WhatsApp "A message comes in"</b><br><code>{{ base }}/webhooks/twilio/message</code></p>
+        <p><b>Twilio — Voice "A call comes in"</b><br><code>{{ base }}/webhooks/twilio/voice</code></p>
+        <p><b>Lead intake API</b> (Facebook/Google lead ads, Zapier)<br><code>POST {{ base }}/api/v1/leads</code> with header <code>X-API-Key</code></p>
+        <p><b>Missed call (other phone systems)</b><br><code>POST {{ base }}/webhooks/missed-call</code></p>
+        <p><b>Inbound email replies</b><br><code>POST {{ base }}/webhooks/email</code></p>
+        <p><b>Website lead form</b><br><code>&lt;iframe src="{{ base }}/f/contact" style="border:0;width:100%;height:640px"&gt;&lt;/iframe&gt;</code></p>
+        <p><b>Website chat</b><br><code>&lt;iframe src="{{ base }}/chat?embed=1" style="border:0;width:380px;height:560px"&gt;&lt;/iframe&gt;</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

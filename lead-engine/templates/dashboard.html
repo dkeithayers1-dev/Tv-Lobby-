@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Know what needs attention</h1><div class="sub">{{ biz }} · Live overview of inquiries, deals and follow-ups</div></div>
+  <div class="row shrink">
+    <a class="btn" href="{{ url_for('pipeline') }}">Open pipeline</a>
+    <a class="btn primary" href="{{ url_for('leads') }}#new">+ Add lead</a>
+  </div>
+</div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="card kpi"><div class="label">New inquiries (7 days)</div><div class="value">{{ stats.new_7d }}</div><div class="hint">{{ stats.won_7d }} won this week</div></div>
+  <div class="card kpi"><div class="label">Avg. speed-to-lead (30 days)</div><div class="value">{{ stats.avg_response_secs|duration }}</div><div class="hint">Time from inquiry to first reply</div></div>
+  <div class="card kpi"><div class="label">Upcoming appointments</div><div class="value">{{ stats.upcoming }}</div><div class="hint">Show rate {{ '%.0f%%'|format(stats.show_rate) if stats.show_rate is not none else '—' }}</div></div>
+  <div class="card kpi"><div class="label">Open pipeline value</div><div class="value">{{ stats.open_value|money }}</div><div class="hint">{{ stats.active_enrollments }} lead{{ '' if stats.active_enrollments == 1 else 's' }} in nurture sequences</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div class="card-head"><h2>Deal stages</h2><a class="small" href="{{ url_for('pipeline') }}">View board →</a></div>
+  <div class="grid" style="grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px">
+    {% for key, label in stages %}
+      {% set c = counts.get(key) %}
+      <a href="{{ url_for('leads', stage=key) }}" style="text-decoration:none;color:inherit">
+        <div style="padding:10px;border:1px solid var(--line);border-radius:8px">
+          <div>{{ ui.stage_badge(key) }}</div>
+          <div style="font-size:20px;font-weight:700;margin-top:6px">{{ c.n if c else 0 }}</div>
+          <div class="small muted">{{ (c.v if c else 0)|money }}</div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card flush">
+    <h2>Overdue follow-ups</h2>
+    {% if overdue %}
+    <div class="table-wrap"><table>
+      <tr><th>Lead</th><th>Stage</th><th>Due</th><th>Last contact</th></tr>
+      {% for l in overdue %}
+      <tr class="click" onclick="location='{{ url_for('lead_detail', lead_id=l.id) }}'">
+        <td><span class="strong">{{ ui.lead_label(l) }}</span>{% if l.ai_paused %} <span class="badge bad">needs human</span>{% endif %}<div class="small muted">{{ l.service or '—' }}</div></td>
+        <td>{{ ui.stage_badge(l.stage) }}</td>
+        <td class="nowrap" style="color:var(--bad)">{{ (l.next_follow_up_at or l.created_at)|ago }}</td>
+        <td class="nowrap muted">{{ l.last_contact_at|ago if l.last_contact_at else 'never' }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="empty">Nothing overdue. Nice work.</div>{% endif %}
+  </div>
+
+  <div class="card flush">
+    <h2>New inquiries</h2>
+    {% if new_inquiries %}
+    <div class="table-wrap"><table>
+      <tr><th>Lead</th><th>Source</th><th>Received</th><th>First reply</th></tr>
+      {% for l in new_inquiries %}
+      <tr class="click" onclick="location='{{ url_for('lead_detail', lead_id=l.id) }}'">
+        <td><span class="strong">{{ ui.lead_label(l) }}</span><div class="small muted">{{ l.service or 'Service not captured yet' }}</div></td>
+        <td><span class="badge">{{ (l.source or '').replace('_',' ') }}</span></td>
+        <td class="nowrap muted">{{ l.created_at|ago }}</td>
+        <td class="nowrap">{% if l.first_response_at %}<span class="badge ok">replied</span>{% else %}<span class="badge bad">waiting</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="empty">No new inquiries. Share your <a href="{{ url_for('contact_form') }}" target="_blank">lead form</a> or <a href="{{ url_for('chat') }}" target="_blank">chat</a>.</div>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Alerts</h2><form method="post" action="{{ url_for('alerts_read_all') }}"><button class="btn sm">Mark all read</button></form></div>
+    {% if alerts %}
+    <ul class="list">
+      {% for a in alerts %}
+      <li><div><span class="badge {{ 'bad' if a.kind in ('handoff','missed_call','cancellation','no_show') else 'brand' if a.kind == 'reply' else 'ok' if a.kind == 'booking' else '' }}">{{ a.kind.replace('_',' ') }}</span>
+        {% if a.lead_id %}<a href="{{ url_for('lead_detail', lead_id=a.lead_id) }}">{{ a.body }}</a>{% else %}{{ a.body }}{% endif %}</div>
+        <span class="small muted nowrap">{{ a.created_at|ago }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="empty">You're all caught up.</div>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Upcoming appointments</h2><a class="small" href="{{ url_for('appointments') }}">All →</a></div>
+    {% if upcoming %}
+    <ul class="list">
+      {% for a in upcoming %}
+      <li><div><a class="strong" href="{{ url_for('lead_detail', lead_id=a.lead_id) }}">{{ a.lead_name or a.phone }}</a><div class="small muted">{{ human_time(a.starts_at) }}</div></div>
+        <span class="badge {{ 'ok' if a.status == 'confirmed' else 'warn' }}">{{ a.status }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="empty">No appointments booked yet.</div>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>Channels</h2>
+  <div class="row small">
+    {% for ch, on in channels.items() %}
+      <div class="shrink"><span class="dot {{ 'on' if on else 'off' }}"></span> {{ {'sms':'SMS','whatsapp':'WhatsApp','voice':'Phone (AI agent)','email':'Email'}[ch] }} — {{ 'live' if on else 'simulated' }}</div>
+    {% endfor %}
+    <div class="shrink"><span class="dot {{ 'on' if ai_live else 'off' }}"></span> AI brain — {{ 'Claude' if ai_live else 'built-in rules' }}</div>
+  </div>
+</div>
+{% endblock %}

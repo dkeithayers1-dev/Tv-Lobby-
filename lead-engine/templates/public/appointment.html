@@ -1,0 +1,30 @@
+{% extends "public/_layout.html" %}
+{% block title %}Your appointment · {{ biz }}{% endblock %}
+{% block heading %}Your appointment{% endblock %}
+{% block content %}
+{% if msg %}<div class="flash ok">{{ msg }}</div>{% endif %}
+<div class="card" style="margin-bottom:16px;text-align:center">
+  <div class="muted small">{{ lead.name or '' }}{% if lead.service %} · {{ lead.service }}{% endif %}</div>
+  <div style="font-size:22px;font-weight:700;margin:6px 0">{{ human_time(appt.starts_at) }}</div>
+  <div class="muted small">{{ appt.duration }} minutes</div>
+  <div style="margin-top:8px"><span class="badge {{ 'ok' if appt.status in ('confirmed','completed') else 'bad' if appt.status in ('cancelled','no_show') else 'warn' }}">{{ appt.status.replace('_',' ') }}</span></div>
+  {% if appt.status in ('scheduled','confirmed') %}
+  <div class="row" style="justify-content:center;margin-top:14px">
+    {% if appt.status == 'scheduled' %}<form method="post" class="shrink"><input type="hidden" name="action" value="confirm"><button class="btn primary">Confirm I'll be there</button></form>{% endif %}
+    <form method="post" class="shrink" onsubmit="return confirm('Cancel this appointment?')"><input type="hidden" name="action" value="cancel"><button class="btn danger">Cancel</button></form>
+  </div>
+  {% endif %}
+</div>
+{% if appt.status in ('scheduled','confirmed','cancelled') %}
+<form class="card" method="post">
+  <h2>{{ 'Pick a new time' if appt.status != 'cancelled' else 'Book a new time' }}</h2>
+  <input type="hidden" name="action" value="reschedule">
+  {% if slots %}
+  <div class="slots">
+    {% for s in slots %}<label><input type="radio" name="slot" value="{{ s.strftime('%Y-%m-%d %H:%M:%S') }}" required><span>{{ human_time(s) }}</span></label>{% endfor %}
+  </div>
+  <button class="btn primary" style="margin-top:12px;width:100%">{{ 'Reschedule' if appt.status != 'cancelled' else 'Book' }}</button>
+  {% else %}<p class="muted">No open times right now — reply to our message and we'll find one.</p>{% endif %}
+</form>
+{% endif %}
+{% endblock %}

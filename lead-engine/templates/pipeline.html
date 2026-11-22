@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Pipeline{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Pipeline</h1><div class="sub">Drag deals between stages. Moving a deal to <b>Quote sent</b> auto-starts its follow-up sequence.</div></div>
+</div>
+<div class="board">
+  {% for key, label in stages %}
+  <div class="col" data-stage="{{ key }}">
+    <div class="col-head"><span>{{ label }}</span><span class="muted">{{ cols[key]|length }} · {{ cols[key]|sum(attribute='value')|money }}</span></div>
+    {% for l in cols[key] %}
+    <div class="deal {{ 'overdue' if l.next_follow_up_at and l.next_follow_up_at <= now and key not in ('won','lost') }}" draggable="true" data-id="{{ l.id }}">
+      <a class="t" href="{{ url_for('lead_detail', lead_id=l.id) }}">{{ ui.lead_label(l) }}</a>
+      <div class="m">{{ l.service or 'No service yet' }}{% if l.value %} · {{ l.value|money }}{% endif %}</div>
+      <div class="m">{% if l.ai_paused %}<span class="badge bad">needs human</span> {% endif %}Updated {{ l.updated_at|ago }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let dragging = null;
+document.querySelectorAll('.deal').forEach(d => {
+  d.addEventListener('dragstart', () => { dragging = d; d.style.opacity = .5; });
+  d.addEventListener('dragend', () => { d.style.opacity = 1; });
+});
+document.querySelectorAll('.col').forEach(col => {
+  col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('over'); });
+  col.addEventListener('dragleave', () => col.classList.remove('over'));
+  col.addEventListener('drop', async e => {
+    e.preventDefault(); col.classList.remove('over');
+    if (!dragging) return;
+    const from = dragging.parentElement;
+    col.appendChild(dragging);
+    const res = await fetch(`/api/leads/${dragging.dataset.id}/stage`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({stage: col.dataset.stage})
+    });
+    if (!res.ok) { from.appendChild(dragging); alert('Could not move deal'); }
+    else location.reload();
+  });
+});
+</script>
+{% endblock %}

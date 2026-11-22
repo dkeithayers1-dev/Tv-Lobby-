@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Inbox{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Inbox</h1><div class="sub">Replies, handoffs from the AI, missed calls and bookings in one place.</div></div>
+  <form method="post" action="{{ url_for('alerts_read_all') }}"><button class="btn">Mark all read</button></form>
+</div>
+
+{% if handoffs %}
+<div class="card" style="margin-bottom:16px;border-color:#fecaca">
+  <h2>Needs a human ({{ handoffs|length }})</h2>
+  <ul class="list">
+    {% for l in handoffs %}
+    <li><div><a class="strong" href="{{ url_for('lead_detail', lead_id=l.id) }}">{{ ui.lead_label(l) }}</a> <span class="small muted">{{ l.service or '' }}</span></div>
+      <span class="small muted">{{ l.updated_at|ago }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="grid g2">
+  <div class="card flush">
+    <h2>Conversations</h2>
+    {% if convos %}
+    <div class="table-wrap"><table>
+      {% for c in convos %}
+      <tr class="click" onclick="location='{{ url_for('lead_detail', lead_id=c.id) }}'">
+        <td><span class="strong">{{ ui.lead_label(c) }}</span> {{ ui.channel_badge(c.last_channel) }}
+          <div class="small {{ 'strong' if c.last_dir == 'in' else 'muted' }}" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ '↩ ' if c.last_dir == 'in' }}{{ c.last_body }}</div></td>
+        <td class="small muted nowrap right">{{ c.last_at|ago }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="empty">No conversations yet.</div>{% endif %}
+  </div>
+
+  <div class="card flush">
+    <h2>Activity</h2>
+    {% if alerts %}
+    <div class="table-wrap"><table>
+      {% for a in alerts %}
+      <tr style="{{ 'background:#fafaff' if not a.read_at }}">
+        <td><span class="badge {{ 'bad' if a.kind in ('handoff','missed_call','cancellation','no_show') else 'brand' if a.kind == 'reply' else 'ok' if a.kind == 'booking' else '' }}">{{ a.kind.replace('_',' ') }}</span></td>
+        <td>{% if a.lead_id %}<a href="{{ url_for('lead_detail', lead_id=a.lead_id) }}">{{ a.body }}</a>{% else %}{{ a.body }}{% endif %}</td>
+        <td class="small muted nowrap">{{ a.created_at|ago }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="empty">No activity yet.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
