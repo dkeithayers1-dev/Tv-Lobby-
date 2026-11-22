@@ -191,11 +191,12 @@ def _match_service(text):
     for svc in services:
         if svc.lower() in low:
             return svc
+    generic = ("repair", "plan", "system", "service", "new", "install")
     for svc in services:
-        words = [w for w in re.findall(r"[a-z]+", svc.lower()) if len(w) > 3 and w not in ("repair", "plan", "system", "service")]
-        if words and any(re.search(rf"\b{w}", low) for w in words):
+        words = [w for w in re.findall(r"[a-z]+", svc.lower()) if w not in generic and (len(w) > 3 or len(w) >= 2 and w.isalpha() and svc.split()[0].lower() == w)]
+        if words and any(re.search(rf"\b{w}\b" if len(w) <= 3 else rf"\b{w}", low) for w in words):
             return svc
-    if re.search(r"\b(broken|not working|repair|fix|leak)\b", low):
+    if re.search(r"\b(broken|broke|not working|stopped working|isn't working|won't turn on|repair|fix|leak|leaking|noise)\b", low):
         return services[0] if services else "Repair"
     return None
 

@@ -276,3 +276,10 @@ def test_customer_links_are_absolute(client):
     lead = auto.find_lead(phone="+15554445555")
     appt = auto.book_appointment(lead, business.available_slots(limit=1)[0])
     assert f"https://leads.example.com/a/{appt['token']}" in messages(lead["id"])[-1]["body"]
+
+
+def test_service_detected_from_casual_wording(client):
+    sms(client, "I'm Riley, my AC stopped working")
+    assert lead_by_phone()["service"] == "AC repair"
+    sms(client, "today if possible")
+    assert "Reply with a number" in messages(lead_by_phone()["id"])[-1]["body"]

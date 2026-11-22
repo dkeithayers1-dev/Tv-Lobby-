@@ -21,7 +21,7 @@
     <div class="timeline-steps">
       {% set ns = namespace(t=0) %}
       {% for st in steps %}{% set ns.t = ns.t + st.delay_hours %}
-        <span class="badge">{{ st.channel|upper }} · {{ '%g'|format(ns.t / 24) if ns.t >= 24 else '%g'|format(ns.t) }}{{ 'd' if ns.t >= 24 else 'h' }}</span>
+        <span class="badge">{{ st.channel|upper }} · {{ '%g'|format((ns.t / 24)|round(1)) if ns.t >= 24 else '%g'|format(ns.t|round(1)) }}{{ 'd' if ns.t >= 24 else 'h' }}</span>
       {% endfor %}
     </div>
     <div class="row small muted" style="margin-top:12px">
